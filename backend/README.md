@@ -27,7 +27,7 @@ pip install -r requirements.txt
 
 ### 3. 環境変数の設定
 
-`.env.example` をコピーして `.env` を作成し、Gemini APIキーを設定してください。
+`.env.example` をコピーして `.env` を作成し、Gemini APIキーとデータベースURLを設定してください。
 
 ```bash
 cp .env.example .env
@@ -36,6 +36,7 @@ cp .env.example .env
 `.env` ファイルを編集:
 ```
 GEMINI_API_KEY=your_actual_gemini_api_key_here
+DATABASE_URL=sqlite:///./kanji_game.db
 ```
 
 **Gemini APIキーの取得方法:**
@@ -44,7 +45,17 @@ GEMINI_API_KEY=your_actual_gemini_api_key_here
 3. "Create API Key" をクリックしてAPIキーを生成
 4. 生成されたキーを `.env` ファイルに貼り付け
 
-### 4. サーバーの起動
+### 4. データベースの初期化
+
+サーバー起動時に自動で初期化されますが、手動で初期化したい場合は以下のコマンドを実行してください:
+
+```bash
+python init_db.py
+```
+
+これにより `kanji_game.db` ファイルが作成され、`scores` テーブルが作成されます。
+
+### 5. サーバーの起動
 
 **重要**: 仮想環境が有効化されていることを確認してください（プロンプトに `(venv)` が表示されている状態）。
 
@@ -100,6 +111,60 @@ deactivate
   "gemini_api_key_set": true
 }
 ```
+
+### POST /api/scores
+
+スコアを登録します。
+
+**リクエスト:**
+```json
+{
+  "user_name": "すしマスター",
+  "score": 1500
+}
+```
+
+**レスポンス:**
+```json
+{
+  "success": true,
+  "message": "Score submitted successfully",
+  "score_id": "uuid-here"
+}
+```
+
+### GET /api/rankings
+
+ランキングTOP10を取得します。同点の場合は日時が早い方が上位になります。
+
+**レスポンス:**
+```json
+{
+  "rankings": [
+    {
+      "rank": 1,
+      "user_name": "すしマスター",
+      "score": 1500,
+      "created_at": "2026-01-17T12:00:00Z"
+    }
+  ],
+  "total_count": 100
+}
+```
+
+## データベース仕様
+
+### scores テーブル
+
+| カラム名 | 型 | 説明 |
+|---------|-----|------|
+| id | String(36) | UUID、主キー |
+| user_name | String(100) | ユーザー名（匿名） |
+| score | Integer | スコア |
+| created_at | DateTime | 作成日時 |
+
+**インデックス:**
+- スコアの降順、作成日時の昇順でソート
 
 ## トラブルシューティング
 
