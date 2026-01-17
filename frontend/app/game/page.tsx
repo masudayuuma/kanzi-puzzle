@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { PlacedPart, availableParts } from '@/data/parts';
-import Palette from '@/components/Palette';
+import ConveyorPalette from '@/components/ConveyorPalette';
 import CanvasStage, { CanvasStageRef } from '@/components/CanvasStage';
 
 interface JudgeResult {
@@ -121,17 +121,13 @@ export default function GamePage() {
         style={{
           flex: 1,
           display: 'flex',
+          flexDirection: 'column',
           padding: '20px',
           gap: '20px',
         }}
       >
-        {/* Left: Palette */}
-        <div>
-          <Palette parts={availableParts} onSelectPart={handleAddPart} />
-        </div>
-
-        {/* Right: Canvas and Controls */}
-        <div style={{ flex: 1 }}>
+        {/* Top: Canvas and Controls */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           {/* Controls */}
           <div
             style={{
@@ -229,13 +225,20 @@ export default function GamePage() {
           )}
 
           {/* Canvas */}
-          <CanvasStage
-            ref={canvasRef}
-            placedParts={placedParts}
-            selectedInstanceId={selectedInstanceId}
-            onSelectPart={setSelectedInstanceId}
-            onUpdatePartPosition={handleUpdatePartPosition}
-          />
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <CanvasStage
+              ref={canvasRef}
+              placedParts={placedParts}
+              selectedInstanceId={selectedInstanceId}
+              onSelectPart={setSelectedInstanceId}
+              onUpdatePartPosition={handleUpdatePartPosition}
+            />
+          </div>
+        </div>
+
+        {/* Bottom: Conveyor Belt Palette */}
+        <div style={{ marginTop: 'auto' }}>
+          <ConveyorPalette parts={availableParts} onSelectPart={handleAddPart} />
         </div>
       </main>
     </div>
