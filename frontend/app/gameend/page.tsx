@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface ScoreSubmitResult {
@@ -32,9 +32,7 @@ export default function GameEndPage() {
     try {
       const response = await fetch('http://localhost:8000/api/scores', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_name: userName.trim(),
           score: score,
@@ -58,309 +56,357 @@ export default function GameEndPage() {
     }
   };
 
+  // “機械チック”ログ文言（必要なら増やしてOK）
+  const machineLines = [
+    'BOOT: NEO-CONSOLE v1.7.2',
+    'CHECK: IO=OK  SENSOR=OK  NET=OK',
+    `RESULT: SCORE=${score}pts`,
+    isSubmitted ? `COMMIT: user="${userName}" score=${score} => OK` : 'AWAIT: USERNAME_INPUT',
+  ];
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Belt Conveyor Background Pattern */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: `
-            repeating-linear-gradient(
-              90deg,
-              transparent,
-              transparent 80px,
-              rgba(255, 255, 255, 0.03) 80px,
-              rgba(255, 255, 255, 0.03) 160px
-            ),
-            repeating-linear-gradient(
-              0deg,
-              transparent,
-              transparent 40px,
-              rgba(255, 255, 255, 0.02) 40px,
-              rgba(255, 255, 255, 0.02) 80px
-            )
-          `,
-          opacity: 0.3,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Subtle Moving Belt Effect */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: `
-            repeating-linear-gradient(
-              90deg,
-              transparent 0,
-              rgba(255, 255, 255, 0.01) 50px,
-              transparent 100px
-            )
-          `,
-          animation: 'conveyorMove 20s linear infinite',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Main Content Card */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 10,
-          maxWidth: '560px',
-          width: '90%',
-          background: 'rgba(30, 30, 50, 0.85)',
-          backdropFilter: 'blur(10px)',
-          borderRadius: '24px',
-          padding: '48px 40px',
-          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5), 0 0 1px rgba(255, 255, 255, 0.1)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-        }}
-      >
-        {/* Title */}
-        <h1
-          style={{
-            margin: '0 0 16px 0',
-            fontSize: '36px',
-            fontWeight: '700',
-            color: '#e0e0e0',
-            textAlign: 'center',
-            letterSpacing: '0.05em',
-          }}
-        >
-          ゲーム終了
-        </h1>
-
-        {/* Score Display */}
-        <div
-          style={{
-            margin: '32px 0',
-            padding: '32px',
-            background: 'linear-gradient(135deg, rgba(74, 144, 226, 0.15) 0%, rgba(39, 174, 96, 0.15) 100%)',
-            borderRadius: '16px',
-            border: '2px solid rgba(74, 144, 226, 0.3)',
-            textAlign: 'center',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '16px',
-              color: '#a0a0b0',
-              marginBottom: '12px',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-            }}
-          >
-            Your Score
-          </div>
-          <div
-            style={{
-              fontSize: '64px',
-              fontWeight: '800',
-              color: '#4A90E2',
-              textShadow: '0 4px 12px rgba(74, 144, 226, 0.4)',
-              lineHeight: '1',
-            }}
-          >
-            {score}
-          </div>
-          <div
-            style={{
-              fontSize: '14px',
-              color: '#808090',
-              marginTop: '8px',
-            }}
-          >
-            点
-          </div>
-        </div>
-
-        {/* Username Form */}
-        {!isSubmitted ? (
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: '24px' }}>
-              <label
-                htmlFor="userName"
-                style={{
-                  display: 'block',
-                  marginBottom: '8px',
-                  fontSize: '14px',
-                  color: '#b0b0c0',
-                  fontWeight: '500',
-                }}
-              >
-                ユーザー名
-              </label>
-              <input
-                id="userName"
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="名前を入力してください"
-                maxLength={100}
-                disabled={isSubmitting}
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  fontSize: '16px',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  borderRadius: '8px',
-                  color: '#e0e0e0',
-                  outline: 'none',
-                  transition: 'all 0.2s ease',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.borderColor = 'rgba(74, 144, 226, 0.5)';
-                }}
-                onBlur={(e) => {
-                  e.target.style.background = 'rgba(255, 255, 255, 0.05)';
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                }}
-              />
+    <div className="page">
+      {/* 1枚絵（背景） */}
+      <div className="scene" aria-label="factory-console-background">
+        {/* モニタ黒画面の上にUIを重ねる */}
+        <div className="screen">
+          <div className="scanlines" />
+          <div className="terminal">
+            <div className="terminalHeader">
+              <div className="led" />
+              <div className="title">SYSTEM CONSOLE</div>
             </div>
 
-            {/* Error Display */}
-            {submitError && (
-              <div
-                style={{
-                  marginBottom: '16px',
-                  padding: '12px 16px',
-                  background: 'rgba(231, 76, 60, 0.15)',
-                  border: '1px solid rgba(231, 76, 60, 0.3)',
-                  borderRadius: '8px',
-                  color: '#E74C3C',
-                  fontSize: '14px',
-                }}
-              >
-                {submitError}
+            <div className="log">
+              {machineLines.map((line, i) => (
+                <div key={i} className="line">
+                  <span className="prompt">{'>'}</span> {line}
+                </div>
+              ))}
+              {!isSubmitted && <div className="cursorLine"><span className="prompt">{'>'}</span> INPUT<span className="cursor" /></div>}
+            </div>
+
+            {/* UI本体 */}
+            {!isSubmitted ? (
+              <form onSubmit={handleSubmit} className="form">
+                <label className="label" htmlFor="userName">
+                  USERNAME
+                </label>
+                <div className="row">
+                  <input
+                    id="userName"
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="e.g. TAMURA"
+                    maxLength={100}
+                    disabled={isSubmitting}
+                    className="input"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !userName.trim()}
+                    className="btn"
+                  >
+                    {isSubmitting ? 'SUBMITTING...' : 'SUBMIT SCORE'}
+                  </button>
+                </div>
+
+                {submitError && (
+                  <div className="error">
+                    <span className="prompt">{'!'}</span> ERROR: {submitError}
+                  </div>
+                )}
+
+                <div className="hint">
+                  <span className="dim">TIP:</span> モニタ内レイアウト位置は <code>--screen-*</code> を微調整
+                </div>
+              </form>
+            ) : (
+              <div className="done">
+                <div className="ok">OK</div>
+                <div className="dim">
+                  user=<b>{userName}</b> / score=<b>{score}</b>
+                </div>
+
+                <div className="links">
+                  <a href="/game" className="link">
+                    {'>'} RESTART GAME
+                  </a>
+                </div>
               </div>
             )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting || !userName.trim()}
-              style={{
-                width: '100%',
-                padding: '16px',
-                fontSize: '16px',
-                fontWeight: '600',
-                background: isSubmitting || !userName.trim()
-                  ? 'rgba(100, 100, 120, 0.3)'
-                  : 'linear-gradient(135deg, #4A90E2 0%, #357ABD 100%)',
-                color: isSubmitting || !userName.trim() ? '#606070' : 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: isSubmitting || !userName.trim() ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                boxShadow: isSubmitting || !userName.trim()
-                  ? 'none'
-                  : '0 4px 12px rgba(74, 144, 226, 0.3)',
-              }}
-              onMouseEnter={(e) => {
-                if (!isSubmitting && userName.trim()) {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(74, 144, 226, 0.4)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = isSubmitting || !userName.trim()
-                  ? 'none'
-                  : '0 4px 12px rgba(74, 144, 226, 0.3)';
-              }}
-            >
-              {isSubmitting ? 'スコア送信中...' : 'スコアを登録'}
-            </button>
-          </form>
-        ) : (
-          <div
-            style={{
-              padding: '24px',
-              background: 'rgba(39, 174, 96, 0.15)',
-              border: '1px solid rgba(39, 174, 96, 0.3)',
-              borderRadius: '12px',
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '48px',
-                marginBottom: '12px',
-              }}
-            >
-              ✅
-            </div>
-            <div
-              style={{
-                fontSize: '18px',
-                color: '#27AE60',
-                fontWeight: '600',
-                marginBottom: '8px',
-              }}
-            >
-              スコアを登録しました！
-            </div>
-            <div
-              style={{
-                fontSize: '14px',
-                color: '#a0a0b0',
-              }}
-            >
-              {userName} - {score}点
+            {/* スコアを常に右下に小さく表示（機械UIっぽく） */}
+            <div className="hud">
+              <div className="hudBox">
+                <div className="hudLabel">SCORE</div>
+                <div className="hudValue">{score}</div>
+              </div>
             </div>
           </div>
-        )}
-
-        {/* Back to Game Link */}
-        <div style={{ marginTop: '32px', textAlign: 'center' }}>
-          <a
-            href="/game"
-            style={{
-              color: '#4A90E2',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: '500',
-              transition: 'color 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#357ABD';
-              e.currentTarget.style.textDecoration = 'underline';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#4A90E2';
-              e.currentTarget.style.textDecoration = 'none';
-            }}
-          >
-            ゲームに戻る
-          </a>
         </div>
       </div>
 
-      {/* CSS Animation for Conveyor Belt */}
       <style jsx>{`
-        @keyframes conveyorMove {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(100px);
-          }
+        /* ===== page ===== */
+        .page {
+          min-height: 100vh;
+          background: #0b0f18;
+        }
+
+        /* ===== scene image ===== */
+        .scene {
+          position: relative;
+          width: 100vw;
+          height: 100vh;
+          background-image: url('/game-end-machine.png');
+          background-repeat: no-repeat;
+          background-size: 130%;
+          background-position: center 45%;
+          user-select: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        /*
+          ===== モニタ部分の位置調整 =====
+          画像中央のモニタ画面に合わせる
+        */
+        .scene {
+          --screen-left: 50%;
+          --screen-top: 35%;
+          --screen-width: 43vw;
+          --screen-height: 40vh;
+        }
+
+        .screen {
+          position: absolute;
+          left: var(--screen-left);
+          top: var(--screen-top);
+          transform: translate(-50%, -50%);
+          width: var(--screen-width);
+          height: var(--screen-height);
+          border-radius: 10px;
+          overflow: hidden;
+        }
+
+        /* ===== terminal look ===== */
+        .terminal {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          padding: 10px 14px;
+          background: radial-gradient(circle at 30% 20%, rgba(0, 255, 140, 0.08), transparent 40%),
+                      linear-gradient(180deg, rgba(0,0,0,0.92), rgba(0,0,0,0.98));
+          color: rgba(160, 255, 205, 0.95);
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+          letter-spacing: 0.02em;
+          text-shadow: 0 0 10px rgba(0, 255, 140, 0.15);
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .terminalHeader {
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          align-items: center;
+          gap: 8px;
+          font-size: 11px;
+          color: rgba(160, 255, 205, 0.85);
+          border-bottom: 1px solid rgba(0, 255, 140, 0.15);
+          padding-bottom: 5px;
+        }
+
+        .led {
+          width: 7px;
+          height: 7px;
+          border-radius: 999px;
+          background: rgba(0, 255, 140, 0.9);
+          box-shadow: 0 0 8px rgba(0, 255, 140, 0.55);
+        }
+
+        .title {
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .right {
+          opacity: 0.9;
+        }
+
+        .log {
+          flex: 0 0 auto;
+          overflow: visible;
+          padding-right: 6px;
+          font-size: 12px;
+          line-height: 1.4;
+        }
+
+        .line, .cursorLine {
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .prompt {
+          color: rgba(0, 255, 140, 0.95);
+        }
+
+        .cursor {
+          display: inline-block;
+          width: 10px;
+          height: 1em;
+          margin-left: 6px;
+          background: rgba(0, 255, 140, 0.9);
+          vertical-align: -2px;
+          animation: blink 1s steps(1) infinite;
+        }
+
+        @keyframes blink {
+          0%, 49% { opacity: 1; }
+          50%, 100% { opacity: 0; }
+        }
+
+        /* scanlines overlay */
+        .scanlines {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background: repeating-linear-gradient(
+            180deg,
+            rgba(255,255,255,0.02) 0px,
+            rgba(255,255,255,0.02) 1px,
+            transparent 2px,
+            transparent 4px
+          );
+          mix-blend-mode: overlay;
+          opacity: 0.35;
+        }
+
+        /* ===== form ===== */
+        .form {
+          display: grid;
+          gap: 5px;
+          border-top: 1px solid rgba(0, 255, 140, 0.12);
+          padding-top: 8px;
+        }
+
+        .label {
+          font-size: 11px;
+          color: rgba(160, 255, 205, 0.8);
+        }
+
+        .row {
+          display: grid;
+          grid-template-columns: 1fr auto;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .input {
+          width: 100%;
+          padding: 7px 10px;
+          border-radius: 4px;
+          border: 1px solid rgba(0, 255, 140, 0.22);
+          background: rgba(0, 0, 0, 0.45);
+          color: rgba(160, 255, 205, 0.95);
+          outline: none;
+          font-size: 12px;
+        }
+        .input:focus {
+          border-color: rgba(0, 255, 140, 0.45);
+          box-shadow: 0 0 0 2px rgba(0, 255, 140, 0.12);
+        }
+
+        .btn {
+          padding: 7px 12px;
+          border-radius: 4px;
+          border: 1px solid rgba(0, 255, 140, 0.28);
+          background: rgba(0, 255, 140, 0.12);
+          color: rgba(160, 255, 205, 0.95);
+          cursor: pointer;
+          font-weight: 700;
+          text-transform: uppercase;
+          font-size: 11px;
+          white-space: nowrap;
+        }
+        .btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+
+        .error {
+          padding: 5px 8px;
+          border-radius: 4px;
+          border: 1px solid rgba(255, 90, 90, 0.35);
+          background: rgba(255, 90, 90, 0.12);
+          color: rgba(255, 150, 150, 0.95);
+          font-size: 10px;
+        }
+
+        .hint {
+          font-size: 9px;
+          color: rgba(160, 255, 205, 0.7);
+        }
+        .dim {
+          opacity: 0.75;
+        }
+
+        /* ===== submitted view ===== */
+        .done {
+          border-top: 1px solid rgba(0, 255, 140, 0.12);
+          padding-top: 12px;
+          display: grid;
+          gap: 10px;
+        }
+
+        .ok {
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
+        .links {
+          margin-top: 6px;
+        }
+
+        .link {
+          display: inline-block;
+          color: rgba(160, 255, 205, 0.95);
+          text-decoration: none;
+          border-bottom: 1px dashed rgba(0, 255, 140, 0.3);
+          padding-bottom: 2px;
+          font-size: 12px;
+        }
+
+        /* ===== HUD ===== */
+        .hud {
+          position: absolute;
+          right: 8px;
+          bottom: 8px;
+          pointer-events: none;
+        }
+        .hudBox {
+          border: 1px solid rgba(0, 255, 140, 0.22);
+          background: rgba(0, 0, 0, 0.35);
+          border-radius: 6px;
+          padding: 5px 8px;
+          min-width: 60px;
+          text-align: right;
+        }
+        .hudLabel {
+          font-size: 8px;
+          opacity: 0.75;
+          letter-spacing: 0.08em;
+        }
+        .hudValue {
+          font-size: 14px;
+          font-weight: 800;
         }
       `}</style>
     </div>
