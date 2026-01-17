@@ -8,6 +8,8 @@ interface ConveyorPaletteProps {
   containerWidth: number;
   containerHeight: number;
   canvasRect: { x: number; y: number; width: number; height: number };
+  onScoreChange?: (score: number, miss: number) => void;
+  onGameEnd?: (finalScore: number, finalMiss: number) => void;
 }
 
 // ========================================
@@ -105,7 +107,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
-const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvasRect }: ConveyorPaletteProps) => {
+const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvasRect, onScoreChange, onGameEnd }: ConveyorPaletteProps) => {
   const [gameState, dispatch] = useReducer(gameReducer, {
     activeItems: [],
     palette: [],
@@ -123,6 +125,13 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
   useEffect(() => {
     gameStateRef.current = gameState;
   }, [gameState]);
+
+  // スコアとミス数が変更されたら親に通知
+  useEffect(() => {
+    if (onScoreChange) {
+      onScoreChange(gameState.score, gameState.miss);
+    }
+  }, [gameState.score, gameState.miss, onScoreChange]);
 
   // ========================================
   // スポーン位置計算
@@ -307,6 +316,10 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
 
   const handleStop = () => {
     setIsPlaying(false);
+    // ゲーム停止時に最終スコアを親に通知
+    if (onGameEnd) {
+      onGameEnd(gameState.score, gameState.miss);
+    }
   };
 
   // ========================================

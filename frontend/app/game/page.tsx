@@ -11,6 +11,7 @@ interface JudgeResult {
   recognized: string;
   confidence: number | null;
   rawText: string;
+  message: string;
 }
 
 export default function GamePage() {
@@ -22,8 +23,9 @@ export default function GamePage() {
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-
-  const TARGET_KANJI = '休';
+  const [aiScore, setAiScore] = useState(0); // AI判定による正解スコア
+  const [typingScore, setTypingScore] = useState(0); // タイピングゲームのスコア
+  const [typingMiss, setTypingMiss] = useState(0); // タイピングゲームのミス数
 
   // コンテナサイズを取得
   useEffect(() => {
@@ -89,48 +91,56 @@ export default function GamePage() {
     setSelectedInstanceId(null);
     setJudgeResult(null);
     setError(null);
+    // スコアはリセットしない（ゲーム終了時に累積スコアを保持）
   };
 
   const handleSubmit = async () => {
     if (isSubmitting) return; // 多重実行防止
-    
+
     setIsSubmitting(true);
     setError(null);
     setJudgeResult(null);
 
-    try {
-      // キャンバスから画像を取得
-      const dataUrl = canvasRef.current?.toDataURL();
-      if (!dataUrl) {
-        throw new Error('キャンバスから画像を取得できませんでした');
+    // 非同期でAI判定を実行（ゲームを止めない）
+    (async () => {
+      try {
+        // キャンバスから画像を取得
+        const dataUrl = canvasRef.current?.toDataURL();
+        if (!dataUrl) {
+          throw new Error('キャンバスから画像を取得できませんでした');
+        }
+
+        // FastAPI に送信
+        const response = await fetch('http://localhost:8000/api/judge', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            imageDataUrl: dataUrl,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        }
+
+        const result: JudgeResult = await response.json();
+        setJudgeResult(result);
+
+        // 正解ならAI判定スコアを+1
+        if (result.ok) {
+          setAiScore((prevScore) => prevScore + 1);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '不明なエラーが発生しました';
+        setError(message);
+        console.error('Submit error:', err);
+      } finally {
+        setIsSubmitting(false);
       }
-
-      // FastAPI に送信
-      const response = await fetch('http://localhost:8000/api/judge', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          targetKanji: TARGET_KANJI,
-          imageDataUrl: dataUrl,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-      }
-
-      const result: JudgeResult = await response.json();
-      setJudgeResult(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '不明なエラーが発生しました';
-      setError(message);
-      console.error('Submit error:', err);
-    } finally {
-      setIsSubmitting(false);
-    }
+    })();
   };
 
   // Spaceキーでのジャッジ実行
@@ -145,7 +155,7 @@ export default function GamePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSubmitting, handleSubmit]); // 依存関係を追加
+  }, [isSubmitting]); // handleSubmitは依存に含めない（無限ループ防止）
 
   return (
     <div 
@@ -160,11 +170,20 @@ export default function GamePage() {
     >
       {/* 4方向レーン（ConveyorPalette） */}
       {dimensions.width > 0 && dimensions.height > 0 && (
-        <ConveyorPalette 
+        <ConveyorPalette
           onSelectPart={handleAddPart}
           containerWidth={dimensions.width}
           containerHeight={dimensions.height}
           canvasRect={canvasRect}
+          onScoreChange={(score, miss) => {
+            setTypingScore(score);
+            setTypingMiss(miss);
+          }}
+          onGameEnd={(finalScore, finalMiss) => {
+            // タイピングスコアとAI判定スコアを合算してゲーム終了ページへ
+            const totalScore = finalScore + aiScore;
+            window.location.href = `/gameend?score=${totalScore}`;
+          }}
         />
       )}
 
@@ -263,9 +282,9 @@ export default function GamePage() {
             }}
           >
             <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {judgeResult.ok ? '✅ 正解！' : '❌ 不正解'}
+              {judgeResult.ok ? '✅ 実在する漢字です！' : '❌ 実在しない漢字です'}
             </div>
-            <div>認識: {judgeResult.recognized || '不明'}</div>
+            <div>{judgeResult.message}</div>
           </div>
         )}
 
@@ -300,7 +319,7 @@ export default function GamePage() {
           zIndex: 100,
         }}
       >
-        漢字パズル（お題：{TARGET_KANJI}）
+        漢字パズル
       </div>
     </div>
   );
