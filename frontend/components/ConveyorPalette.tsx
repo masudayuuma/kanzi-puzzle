@@ -8,8 +8,8 @@ interface ConveyorPaletteProps {
   containerWidth: number;
   containerHeight: number;
   canvasRect: { x: number; y: number; width: number; height: number };
-  onScoreChange?: (score: number, miss: number) => void;
-  onGameEnd?: (finalScore: number, finalMiss: number) => void;
+  onScoreChange?: (score: number) => void;
+  onGameEnd?: (finalScore: number) => void;
 }
 
 // ========================================
@@ -19,6 +19,7 @@ const GAME_CONFIG = {
   SPAWN_INTERVAL: 1500,       // スポーン間隔（ミリ秒）
   MOVE_SPEED: 150,            // 移動速度（ピクセル/秒）
   LANE_THICKNESS: 80,         // レーン厚み
+  GAME_DURATION: 60,          // ゲーム時間（秒）
 };
 
 // ========================================
@@ -28,7 +29,6 @@ interface GameState {
   activeItems: ActiveItem[];
   palette: PaletteItem[];
   score: number;
-  miss: number;
   nextId: number;
 }
 
@@ -90,7 +90,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         activeItems: state.activeItems.filter((item) => !action.missedIds.includes(item.id)),
-        miss: state.miss + action.missedIds.length,
       };
 
     case 'RESET_GAME':
@@ -98,7 +97,6 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         activeItems: [],
         palette: [],
         score: 0,
-        miss: 0,
         nextId: 1,
       };
 
@@ -112,13 +110,14 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     activeItems: [],
     palette: [],
     score: 0,
-    miss: 0,
     nextId: 1,
   });
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [timeRemaining, setTimeRemaining] = useState(GAME_CONFIG.GAME_DURATION);
   const lastSpawnTimeRef = useRef<number>(0);
   const lastUpdateTimeRef = useRef<number>(0);
+  const gameStartTimeRef = useRef<number>(0);
   const gameStateRef = useRef(gameState);
 
   // gameStateRefを常に最新に保つ
@@ -126,12 +125,12 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     gameStateRef.current = gameState;
   }, [gameState]);
 
-  // スコアとミス数が変更されたら親に通知
+  // スコアが変更されたら親に通知
   useEffect(() => {
     if (onScoreChange) {
-      onScoreChange(gameState.score, gameState.miss);
+      onScoreChange(gameState.score);
     }
-  }, [gameState.score, gameState.miss, onScoreChange]);
+  }, [gameState.score, onScoreChange]);
 
   // ========================================
   // スポーン位置計算（レーンの幅に対して中央配置）
@@ -204,10 +203,25 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
       if (lastUpdateTimeRef.current === 0) {
         lastUpdateTimeRef.current = timestamp;
         lastSpawnTimeRef.current = timestamp;
+        gameStartTimeRef.current = timestamp;
       }
 
       const deltaTime = (timestamp - lastUpdateTimeRef.current) / 1000;
       lastUpdateTimeRef.current = timestamp;
+
+      // 経過時間を計算して残り時間を更新
+      const elapsedSeconds = (timestamp - gameStartTimeRef.current) / 1000;
+      const remaining = Math.max(0, GAME_CONFIG.GAME_DURATION - elapsedSeconds);
+      setTimeRemaining(remaining);
+
+      // 時間切れチェック
+      if (remaining <= 0) {
+        setIsPlaying(false);
+        if (onGameEnd) {
+          onGameEnd(gameStateRef.current.score);
+        }
+        return;
+      }
 
       // スポーン処理
       if (timestamp - lastSpawnTimeRef.current >= GAME_CONFIG.SPAWN_INTERVAL) {
@@ -216,8 +230,8 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
       }
 
       // 位置更新
-      dispatch({ 
-        type: 'UPDATE_POSITIONS', 
+      dispatch({
+        type: 'UPDATE_POSITIONS',
         deltaTime,
         containerW: containerWidth,
         containerH: containerHeight,
@@ -247,7 +261,7 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isPlaying, spawnItem, containerWidth, containerHeight]);
+  }, [isPlaying, spawnItem, containerWidth, containerHeight, onGameEnd]);
 
   // ========================================
   // キー入力処理（優先順位付き）
@@ -328,15 +342,9 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     dispatch({ type: 'RESET_GAME' });
     lastSpawnTimeRef.current = 0;
     lastUpdateTimeRef.current = 0;
+    gameStartTimeRef.current = 0;
+    setTimeRemaining(GAME_CONFIG.GAME_DURATION);
     setIsPlaying(true);
-  };
-
-  const handleStop = () => {
-    setIsPlaying(false);
-    // ゲーム停止時に最終スコアを親に通知
-    if (onGameEnd) {
-      onGameEnd(gameState.score, gameState.miss);
-    }
   };
 
   // ========================================
@@ -405,26 +413,30 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
           zIndex: 100,
         }}
       >
-        <button
-          onClick={isPlaying ? handleStop : handleStart}
-          style={{
-            padding: '8px 20px',
-            fontSize: '15px',
-            cursor: 'pointer',
-            background: isPlaying ? '#f44336' : '#4CAF50',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            fontWeight: 'bold',
-          }}
-        >
-          {isPlaying ? '⏸ 停止' : '▶ 開始'}
-        </button>
+        {!isPlaying && (
+          <button
+            onClick={handleStart}
+            style={{
+              padding: '8px 20px',
+              fontSize: '15px',
+              cursor: 'pointer',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              fontWeight: 'bold',
+            }}
+          >
+            ▶ 開始
+          </button>
+        )}
+        {isPlaying && (
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#FF6B6B' }}>
+            残り時間: {Math.ceil(timeRemaining)}秒
+          </div>
+        )}
         <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFD700' }}>
           Score: {gameState.score}
-        </div>
-        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#FF4444' }}>
-          Miss: {gameState.miss}
         </div>
       </div>
 

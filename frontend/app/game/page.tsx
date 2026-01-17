@@ -18,14 +18,12 @@ export default function GamePage() {
   const [placedParts, setPlacedParts] = useState<PlacedPart[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const canvasRef = useRef<CanvasStageRef>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [judgeResult, setJudgeResult] = useState<JudgeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [aiScore, setAiScore] = useState(0); // AI判定による正解スコア
   const [typingScore, setTypingScore] = useState(0); // タイピングゲームのスコア
-  const [typingMiss, setTypingMiss] = useState(0); // タイピングゲームのミス数
 
   // コンテナサイズを取得
   useEffect(() => {
@@ -96,11 +94,8 @@ export default function GamePage() {
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return; // 多重実行防止
-
-    setIsSubmitting(true);
-    setError(null);
-    setJudgeResult(null);
+    // キャンバスに何もない場合は処理しない
+    if (placedParts.length === 0) return;
 
     // 非同期でAI判定を実行（ゲームを止めない）
     (async () => {
@@ -110,6 +105,10 @@ export default function GamePage() {
         if (!dataUrl) {
           throw new Error('キャンバスから画像を取得できませんでした');
         }
+
+        // キャンバスをクリア（リクエスト送信後すぐに）
+        setPlacedParts([]);
+        setSelectedInstanceId(null);
 
         // FastAPI に送信
         const response = await fetch('http://localhost:8000/api/judge', {
@@ -138,8 +137,6 @@ export default function GamePage() {
         const message = err instanceof Error ? err.message : '不明なエラーが発生しました';
         setError(message);
         console.error('Submit error:', err);
-      } finally {
-        setIsSubmitting(false);
       }
     })();
   };
@@ -147,8 +144,7 @@ export default function GamePage() {
   // Spaceキーでのジャッジ実行
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !isSubmitting) {
-        // タイピングゲーム実行中でない場合のみ
+      if (e.code === 'Space') {
         e.preventDefault();
         handleSubmit();
       }
@@ -156,7 +152,7 @@ export default function GamePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSubmitting]); // handleSubmitは依存に含めない（無限ループ防止）
+  }, [placedParts]); // handleSubmitは依存に含めない（無限ループ防止）
 
   return (
     <div
@@ -179,11 +175,10 @@ export default function GamePage() {
           containerWidth={dimensions.width}
           containerHeight={dimensions.height}
           canvasRect={canvasRect}
-          onScoreChange={(score, miss) => {
+          onScoreChange={(score) => {
             setTypingScore(score);
-            setTypingMiss(miss);
           }}
-          onGameEnd={(finalScore, finalMiss) => {
+          onGameEnd={(finalScore) => {
             // タイピングスコアとAI判定スコアを合算してゲーム終了ページへ
             const totalScore = finalScore + aiScore;
             window.location.href = `/gameend?score=${totalScore}`;
@@ -258,18 +253,18 @@ export default function GamePage() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={placedParts.length === 0}
             style={{
               padding: '10px 20px',
               fontSize: '14px',
-              backgroundColor: isSubmitting ? '#95A5A6' : '#27AE60',
+              backgroundColor: placedParts.length === 0 ? '#95A5A6' : '#27AE60',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              cursor: placedParts.length === 0 ? 'not-allowed' : 'pointer',
             }}
           >
-            {isSubmitting ? '判定中...' : 'AI判定'}
+            AI判定
           </button>
         </div>
 
