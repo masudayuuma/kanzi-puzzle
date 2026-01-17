@@ -5,6 +5,7 @@ import Link from 'next/link';
 export default function HomePage() {
   const playStartSound = () => {
     const audio = new Audio('/sounds/start.mp3');
+    audio.volume = 0.1; // 音量を10%に設定
     audio.play().catch(err => console.error('Audio play failed:', err));
   };
 

@@ -22,6 +22,7 @@ export default function RankingPage() {
 
   useEffect(() => {
     const audio = new Audio('/sounds/finish.mp3');
+    audio.volume = 0.05; // 音量を5%に設定
     audio.play().catch(err => console.error('Audio play failed:', err));
     fetchRankings();
   }, []);

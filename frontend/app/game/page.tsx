@@ -30,7 +30,7 @@ export default function GamePage() {
   // BGM再生
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = 0.3; // 音量を30%に設定
+      audioRef.current.volume = 0.1; // 音量を10%に設定
       audioRef.current.loop = true; // ループ再生
       audioRef.current.play().catch(err => {
         console.log('BGM autoplay prevented:', err);
