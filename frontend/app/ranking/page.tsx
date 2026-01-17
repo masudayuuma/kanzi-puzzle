@@ -162,18 +162,18 @@ export default function RankingPage() {
                   ))}
                 </div>
               )}
+            </div>
 
-              {/* Navigation Links */}
-              <div className="links">
-                <a href="/game" className="link">
-                  {'>'} BACK TO GAME
-                </a>
-                {!isLoading && !error && (
-                  <button onClick={fetchRankings} className="linkBtn">
-                    {'>'} REFRESH
-                  </button>
-                )}
-              </div>
+            {/* Navigation Links */}
+            <div className="links">
+              <a href="/game" className="link">
+                {'>'} BACK TO GAME
+              </a>
+              {!isLoading && !error && (
+                <button onClick={fetchRankings} className="linkBtn">
+                  {'>'} REFRESH
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -323,6 +323,7 @@ export default function RankingPage() {
           padding-top: 8px;
           overflow-y: auto;
           overflow-x: hidden;
+          min-height: 0;
         }
 
         .centerMsg {
@@ -457,11 +458,11 @@ export default function RankingPage() {
 
         /* ===== links ===== */
         .links {
-          margin-top: 8px;
+          flex: 0 0 auto;
           display: flex;
           gap: 12px;
           justify-content: center;
-          padding-top: 8px;
+          padding: 8px 4px 4px 4px;
           border-top: 1px solid rgba(0, 255, 140, 0.08);
         }
 
