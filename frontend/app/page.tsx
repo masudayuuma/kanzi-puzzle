@@ -27,7 +27,7 @@ export default function HomePage() {
       <div
         style={{
           position: 'absolute',
-          bottom: '100px',
+          bottom: '60px',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 2,
@@ -68,6 +68,38 @@ export default function HomePage() {
           }}
         >
           START
+        </Link>
+
+        {/* ランキングボタン */}
+        <Link
+          href="/ranking"
+          style={{
+            padding: '16px 60px',
+            fontSize: '28px',
+            fontWeight: 'bold',
+            backgroundColor: 'rgba(255, 165, 0, 0.95)',
+            color: 'white',
+            textDecoration: 'none',
+            borderRadius: '10px',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.2)',
+            transition: 'all 0.2s ease',
+            border: '2px solid rgba(255, 200, 0, 0.8)',
+            cursor: 'pointer',
+            textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)',
+            letterSpacing: '2px',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2)';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 180, 0, 0.98)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.2)';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 165, 0, 0.95)';
+          }}
+        >
+          RANKING
         </Link>
       </div>
     </div>
