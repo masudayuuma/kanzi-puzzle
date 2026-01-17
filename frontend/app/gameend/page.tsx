@@ -56,12 +56,9 @@ export default function GameEndPage() {
     }
   };
 
-  // “機械チック”ログ文言（必要なら増やしてOK）
   const machineLines = [
-    'BOOT: NEO-CONSOLE v1.7.2',
-    'CHECK: IO=OK  SENSOR=OK  NET=OK',
-    `RESULT: SCORE=${score}pts`,
-    isSubmitted ? `COMMIT: user="${userName}" score=${score} => OK` : 'AWAIT: USERNAME_INPUT',
+    `SCORE: ${score}pts`,
+    isSubmitted ? 'STATUS: REGISTERED' : 'STATUS: ENTER USERNAME',
   ];
 
   return (
@@ -118,33 +115,21 @@ export default function GameEndPage() {
                     <span className="prompt">{'!'}</span> ERROR: {submitError}
                   </div>
                 )}
-
-                <div className="hint">
-                  <span className="dim">TIP:</span> モニタ内レイアウト位置は <code>--screen-*</code> を微調整
-                </div>
               </form>
             ) : (
               <div className="done">
-                <div className="ok">OK</div>
-                <div className="dim">
-                  user=<b>{userName}</b> / score=<b>{score}</b>
-                </div>
-
+                <div className="ok">REGISTERED</div>
+                
                 <div className="links">
                   <a href="/game" className="link">
                     {'>'} RESTART GAME
                   </a>
+                  <a href="/ranking" className="link">
+                    {'>'} VIEW RANKING
+                  </a>
                 </div>
               </div>
             )}
-
-            {/* スコアを常に右下に小さく表示（機械UIっぽく） */}
-            <div className="hud">
-              <div className="hudBox">
-                <div className="hudLabel">SCORE</div>
-                <div className="hudValue">{score}</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -198,7 +183,7 @@ export default function GameEndPage() {
           position: relative;
           width: 100%;
           height: 100%;
-          padding: 10px 14px;
+          padding: 8px 12px;
           background: radial-gradient(circle at 30% 20%, rgba(0, 255, 140, 0.08), transparent 40%),
                       linear-gradient(180deg, rgba(0,0,0,0.92), rgba(0,0,0,0.98));
           color: rgba(160, 255, 205, 0.95);
@@ -207,7 +192,7 @@ export default function GameEndPage() {
           text-shadow: 0 0 10px rgba(0, 255, 140, 0.15);
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
         }
 
         .terminalHeader {
@@ -215,10 +200,10 @@ export default function GameEndPage() {
           grid-template-columns: auto 1fr auto;
           align-items: center;
           gap: 8px;
-          font-size: 11px;
+          font-size: 18px;
           color: rgba(160, 255, 205, 0.85);
           border-bottom: 1px solid rgba(0, 255, 140, 0.15);
-          padding-bottom: 5px;
+          padding-bottom: 3px;
         }
 
         .led {
@@ -241,9 +226,9 @@ export default function GameEndPage() {
         .log {
           flex: 0 0 auto;
           overflow: visible;
-          padding-right: 6px;
-          font-size: 12px;
-          line-height: 1.4;
+          padding-right: 4px;
+          font-size: 20px;
+          line-height: 1.3;
         }
 
         .line, .cursorLine {
@@ -290,32 +275,32 @@ export default function GameEndPage() {
         /* ===== form ===== */
         .form {
           display: grid;
-          gap: 5px;
+          gap: 4px;
           border-top: 1px solid rgba(0, 255, 140, 0.12);
-          padding-top: 8px;
+          padding-top: 6px;
         }
 
         .label {
-          font-size: 11px;
+          font-size: 18px;
           color: rgba(160, 255, 205, 0.8);
         }
 
         .row {
-          display: grid;
-          grid-template-columns: 1fr auto;
-          gap: 8px;
-          align-items: center;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          align-items: stretch;
         }
 
         .input {
           width: 100%;
-          padding: 7px 10px;
+          padding: 12px 14px;
           border-radius: 4px;
           border: 1px solid rgba(0, 255, 140, 0.22);
           background: rgba(0, 0, 0, 0.45);
           color: rgba(160, 255, 205, 0.95);
           outline: none;
-          font-size: 12px;
+          font-size: 20px;
         }
         .input:focus {
           border-color: rgba(0, 255, 140, 0.45);
@@ -323,7 +308,7 @@ export default function GameEndPage() {
         }
 
         .btn {
-          padding: 7px 12px;
+          padding: 12px 20px;
           border-radius: 4px;
           border: 1px solid rgba(0, 255, 140, 0.28);
           background: rgba(0, 255, 140, 0.12);
@@ -331,8 +316,9 @@ export default function GameEndPage() {
           cursor: pointer;
           font-weight: 700;
           text-transform: uppercase;
-          font-size: 11px;
+          font-size: 18px;
           white-space: nowrap;
+          align-self: center;
         }
         .btn:disabled {
           opacity: 0.4;
@@ -340,12 +326,12 @@ export default function GameEndPage() {
         }
 
         .error {
-          padding: 5px 8px;
+          padding: 8px 12px;
           border-radius: 4px;
           border: 1px solid rgba(255, 90, 90, 0.35);
           background: rgba(255, 90, 90, 0.12);
           color: rgba(255, 150, 150, 0.95);
-          font-size: 10px;
+          font-size: 16px;
         }
 
         .hint {
@@ -359,20 +345,23 @@ export default function GameEndPage() {
         /* ===== submitted view ===== */
         .done {
           border-top: 1px solid rgba(0, 255, 140, 0.12);
-          padding-top: 12px;
+          padding-top: 8px;
           display: grid;
-          gap: 10px;
+          gap: 8px;
         }
 
         .ok {
-          font-size: 22px;
+          font-size: 34px;
           font-weight: 800;
           letter-spacing: 0.08em;
           text-transform: uppercase;
         }
 
         .links {
-          margin-top: 6px;
+          margin-top: 4px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
 
         .link {
@@ -381,7 +370,7 @@ export default function GameEndPage() {
           text-decoration: none;
           border-bottom: 1px dashed rgba(0, 255, 140, 0.3);
           padding-bottom: 2px;
-          font-size: 12px;
+          font-size: 18px;
         }
 
         /* ===== HUD ===== */
@@ -400,12 +389,12 @@ export default function GameEndPage() {
           text-align: right;
         }
         .hudLabel {
-          font-size: 8px;
+          font-size: 10px;
           opacity: 0.75;
           letter-spacing: 0.08em;
         }
         .hudValue {
-          font-size: 14px;
+          font-size: 20px;
           font-weight: 800;
         }
       `}</style>
