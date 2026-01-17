@@ -297,19 +297,29 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
 
     const targetItem = candidates[0];
     dispatch({ type: 'CAPTURE_ITEM', itemId: targetItem.id });
-    
+
     // 取得したパーツをキャンバスに追加
     const partMap: Record<string, string> = {
-      '亻': 'person',
-      '木': 'tree',
-      '氵': 'water',
-      '火': 'fire',
-      '土': 'earth',
-      '日': 'sun',
-      '月': 'moon',
-      '口': 'mouth',
-      '扌': 'hand',
-      '心': 'heart',
+      '学': 'gaku',
+      '生': 'sei',
+      '校': 'kou',
+      '先': 'sen',
+      '教': 'kyou',
+      '食': 'shoku',
+      '料': 'ryou',
+      '理': 'ri',
+      '品': 'hin',
+      '材': 'zai',
+      '自': 'ji',
+      '動': 'dou',
+      '車': 'sha',
+      '電': 'den',
+      '気': 'ki',
+      '会': 'kai',
+      '社': 'sha2',
+      '員': 'in',
+      '仕': 'shi',
+      '事': 'ji2',
     };
     const partId = partMap[targetItem.radical];
     if (partId) {

@@ -54,10 +54,10 @@ def extract_base64_from_data_url(data_url: str) -> str:
     return data_url
 
 
-def extract_kanji_from_text(text: str) -> str:
-    """テキストから最初のCJK統合漢字1文字を抽出"""
+def extract_jukugo_from_text(text: str) -> str:
+    """テキストから熟語（複数の漢字）を抽出"""
     # CJK統合漢字のUnicode範囲: U+4E00-U+9FFF
-    match = re.search(r'[\u4E00-\u9FFF]', text)
+    match = re.search(r'[\u4E00-\u9FFF]+', text)
     if match:
         return match.group(0)
     # '?' が返ってきた場合は空文字
@@ -77,14 +77,14 @@ async def judge_kanji(request: JudgeRequest):
         print(f"[DEBUG] 画像データサイズ: {len(base64_data)} bytes")
 
         # Gemini APIに送信
-        # 2段階プロンプト: 1. 漢字を認識、2. 実在する漢字かを判定
-        prompt = """次の画像に写っている文字を分析し、以下の形式で回答してください：
+        # 2段階プロンプト: 1. 熟語を認識、2. 実在する熟語かを判定
+        prompt = """次の画像に写っている文字列を分析し、以下の形式で回答してください：
 
-1行目: 認識した漢字1文字（漢字でない場合や判別できない場合は「?」）
-2行目: その文字が実在する漢字かどうか（「存在する」または「存在しない」または「不明」）
+1行目: 認識した熟語（複数の漢字の組み合わせ。熟語でない場合や判別できない場合は「?」）
+2行目: その熟語が実在する日本語の熟語（二字熟語、三字熟語、四字熟語など）かどうか（「存在する」または「存在しない」または「不明」）
 
 例:
-休
+学校
 存在する
 
 説明や追加の文章は不要です。"""
@@ -107,22 +107,22 @@ async def judge_kanji(request: JudgeRequest):
 
         # レスポンスを解析
         lines = raw_text.split('\n')
-        recognized = extract_kanji_from_text(lines[0]) if lines else ""
+        recognized = extract_jukugo_from_text(lines[0]) if lines else ""
         existence_check = lines[1].strip() if len(lines) > 1 else ""
 
-        print(f"[DEBUG] 認識された漢字: '{recognized}'")
+        print(f"[DEBUG] 認識された熟語: '{recognized}'")
         print(f"[DEBUG] 存在判定: '{existence_check}'")
 
-        # 存在する漢字かどうかを判定
+        # 存在する熟語かどうかを判定
         ok = recognized != "" and "存在する" in existence_check
 
         # メッセージを生成
         if not recognized:
-            message = "漢字を認識できませんでした"
+            message = "熟語を認識できませんでした"
         elif ok:
-            message = f"「{recognized}」は実在する漢字です！"
+            message = f"「{recognized}」は実在する熟語です！"
         else:
-            message = f"「{recognized}」は実在しない漢字です"
+            message = f"「{recognized}」は実在しない熟語です"
 
         print(f"[DEBUG] 判定結果: {'正解（実在する）' if ok else '不正解（実在しない/不明）'}")
 
