@@ -149,9 +149,18 @@ export default function GamePage() {
         const result: JudgeResult = await response.json();
         setJudgeResult(result);
 
-        // 正解ならAI判定スコアを+1
+        // 正解なら文字数に応じてスコア加算
         if (result.ok) {
-          setAiScore((prevScore) => prevScore + 1);
+          const length = result.recognized.length;
+          let points = 0;
+          if (length === 2) {
+            points = 2;  // 二字熟語: 2点
+          } else if (length === 3) {
+            points = 16; // 三字熟語: 16点
+          } else if (length >= 4) {
+            points = 64; // 四字熟語以上: 64点
+          }
+          setAiScore((prevScore) => prevScore + points);
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : '不明なエラーが発生しました';
