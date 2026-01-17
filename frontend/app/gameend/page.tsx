@@ -65,7 +65,7 @@ export default function GameEndPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #4A90E2 100%)',
+        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #0f3460 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}
