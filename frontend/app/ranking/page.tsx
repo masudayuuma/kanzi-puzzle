@@ -21,6 +21,8 @@ export default function RankingPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const audio = new Audio('/sounds/finish.mp3');
+    audio.play().catch(err => console.error('Audio play failed:', err));
     fetchRankings();
   }, []);
 

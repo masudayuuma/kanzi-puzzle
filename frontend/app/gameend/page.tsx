@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface ScoreSubmitResult {
@@ -17,6 +17,11 @@ export default function GameEndPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    const audio = new Audio('/sounds/finish.mp3');
+    audio.play().catch(err => console.error('Audio play failed:', err));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

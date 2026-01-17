@@ -3,6 +3,11 @@
 import Link from 'next/link';
 
 export default function HomePage() {
+  const playStartSound = () => {
+    const audio = new Audio('/sounds/start.mp3');
+    audio.play().catch(err => console.error('Audio play failed:', err));
+  };
+
   return (
     <div
       style={{
@@ -35,6 +40,7 @@ export default function HomePage() {
         {/* 開始ボタン */}
         <Link
           href="/game"
+          onClick={playStartSound}
           style={{
             padding: '24px 80px',
             fontSize: '36px',

@@ -24,6 +24,26 @@ export default function GamePage() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [aiScore, setAiScore] = useState(0); // AI判定による正解スコア
   const [typingScore, setTypingScore] = useState(0); // タイピングゲームのスコア
+  const [typingMiss, setTypingMiss] = useState(0); // タイピングゲームのミス数
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  // BGM再生
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.3; // 音量を30%に設定
+      audioRef.current.loop = true; // ループ再生
+      audioRef.current.play().catch(err => {
+        console.log('BGM autoplay prevented:', err);
+      });
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   // コンテナサイズを取得
   useEffect(() => {
@@ -168,6 +188,8 @@ export default function GamePage() {
         backgroundRepeat: 'no-repeat',
       }}
     >
+      {/* BGM */}
+      <audio ref={audioRef} src="/sounds/gamesound.mp3" />
       {/* 4方向レーン（ConveyorPalette） */}
       {dimensions.width > 0 && dimensions.height > 0 && (
         <ConveyorPalette
