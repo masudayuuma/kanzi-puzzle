@@ -81,7 +81,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         activeItems: state.activeItems.filter((item) => item.id !== action.itemId),
         palette: [...state.palette, paletteItem],
-        score: state.score + 1,
+        // キャッチ時は点数加算しない
       };
     }
 
@@ -113,7 +113,7 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     nextId: 1,
   });
 
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true); // 初期状態で開始
   const [timeRemaining, setTimeRemaining] = useState(GAME_CONFIG.GAME_DURATION);
   const lastSpawnTimeRef = useRef<number>(0);
   const lastUpdateTimeRef = useRef<number>(0);
@@ -466,30 +466,8 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
           zIndex: 100,
         }}
       >
-        {!isPlaying && (
-          <button
-            onClick={handleStart}
-            style={{
-              padding: '8px 20px',
-              fontSize: '15px',
-              cursor: 'pointer',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontWeight: 'bold',
-            }}
-          >
-            ▶ 開始
-          </button>
-        )}
-        {isPlaying && (
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#FF6B6B' }}>
-            残り時間: {Math.ceil(timeRemaining)}秒
-          </div>
-        )}
-        <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#FFD700' }}>
-          Score: {gameState.score}
+        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#FF6B6B' }}>
+          残り時間: {Math.ceil(timeRemaining)}秒
         </div>
       </div>
 
