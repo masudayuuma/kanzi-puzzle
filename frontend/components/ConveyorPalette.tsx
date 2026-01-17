@@ -264,11 +264,45 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
   }, [isPlaying, spawnItem, containerWidth, containerHeight, onGameEnd]);
 
   // ========================================
-  // キー入力処理（優先順位付き）
+  // タイミング判定：アイテムがキーラベルゾーン内にいるか
+  // ========================================
+  const isItemInCaptureZone = useCallback((item: ActiveItem): boolean => {
+    const rect = laneRects[item.lane];
+
+    // キーラベル表示エリアのサイズと位置を定義
+    const labelSize = { width: 60, height: 60 }; // ラベルのサイズ
+    const tolerance = 25; // 判定を少し広げる（キャプチャしやすくする）
+
+    switch (item.lane) {
+      case 'TOP': {
+        // 上レーン：中央付近の横位置判定
+        const centerX = rect.left + rect.width / 2;
+        return Math.abs(item.x - centerX) <= (labelSize.width / 2 + tolerance);
+      }
+      case 'BOTTOM': {
+        // 下レーン：中央付近の横位置判定
+        const centerX = rect.left + rect.width / 2;
+        return Math.abs(item.x - centerX) <= (labelSize.width / 2 + tolerance);
+      }
+      case 'LEFT': {
+        // 左レーン：中央付近の縦位置判定
+        const centerY = rect.top + rect.height / 2;
+        return Math.abs(item.y - centerY) <= (labelSize.height / 2 + tolerance);
+      }
+      case 'RIGHT': {
+        // 右レーン：中央付近の縦位置判定
+        const centerY = rect.top + rect.height / 2;
+        return Math.abs(item.y - centerY) <= (labelSize.height / 2 + tolerance);
+      }
+    }
+  }, [canvasRect, containerWidth, containerHeight]);
+
+  // ========================================
+  // キー入力処理（タイミング判定付き）
   // ========================================
   const handleKeyPress = useCallback((pressedKey: string) => {
     const currentState = gameStateRef.current;
-    
+
     // キーに対応するレーンを特定
     let targetLane: LaneType | null = null;
     for (const lane of ALL_LANES) {
@@ -277,12 +311,15 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
         break;
       }
     }
-    
+
     if (!targetLane) return;
 
-    // そのレーンのアイテムを抽出
-    const candidates = currentState.activeItems.filter((item) => item.lane === targetLane);
-    if (candidates.length === 0) return;
+    // そのレーンのアイテムで、かつキャプチャゾーン内にあるものを抽出
+    const candidates = currentState.activeItems.filter((item) =>
+      item.lane === targetLane && isItemInCaptureZone(item)
+    );
+
+    if (candidates.length === 0) return; // ゾーン内にアイテムがなければ何もしない
 
     // 優先順位: 終点に最も近い（進行方向で最大/最小）
     candidates.sort((a, b) => {
@@ -325,7 +362,7 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     if (partId) {
       onSelectPart(partId);
     }
-  }, [onSelectPart]);
+  }, [onSelectPart, isItemInCaptureZone]);
 
   // ========================================
   // キーボードイベント
