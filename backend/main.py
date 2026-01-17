@@ -36,7 +36,6 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 
 
 class JudgeRequest(BaseModel):
-    targetKanji: str
     imageDataUrl: str
 
 
@@ -45,6 +44,7 @@ class JudgeResponse(BaseModel):
     recognized: str
     confidence: Optional[float] = None
     rawText: str
+    message: str
 
 
 def extract_base64_from_data_url(data_url: str) -> str:
@@ -69,17 +69,25 @@ def extract_kanji_from_text(text: str) -> str:
 @app.post("/api/judge", response_model=JudgeResponse)
 async def judge_kanji(request: JudgeRequest):
     """
-    画像から漢字を認識し、targetKanjiと一致するか判定
+    画像から漢字を認識し、実在する漢字かどうかを判定
     """
     try:
         # base64データを抽出
         base64_data = extract_base64_from_data_url(request.imageDataUrl)
         print(f"[DEBUG] 画像データサイズ: {len(base64_data)} bytes")
-        print(f"[DEBUG] 目標漢字: {request.targetKanji}")
 
         # Gemini APIに送信
-        # プロンプト: 漢字1文字だけを返すように厳密に指示
-        prompt = "次の画像に写っている漢字を、漢字1文字だけで答えてください。説明や記号は不要です。判別できない場合は『?』だけ返してください。"
+        # 2段階プロンプト: 1. 漢字を認識、2. 実在する漢字かを判定
+        prompt = """次の画像に写っている文字を分析し、以下の形式で回答してください：
+
+1行目: 認識した漢字1文字（漢字でない場合や判別できない場合は「?」）
+2行目: その文字が実在する漢字かどうか（「存在する」または「存在しない」または「不明」）
+
+例:
+休
+存在する
+
+説明や追加の文章は不要です。"""
 
         print("[DEBUG] Gemini APIにリクエスト送信中...")
         response = client.models.generate_content(
@@ -97,19 +105,33 @@ async def judge_kanji(request: JudgeRequest):
         raw_text = response.text.strip() if response.text else ""
         print(f"[DEBUG] Gemini APIからの生レスポンス: '{raw_text}'")
 
-        # 漢字を抽出
-        recognized = extract_kanji_from_text(raw_text)
-        print(f"[DEBUG] 抽出された漢字: '{recognized}'")
+        # レスポンスを解析
+        lines = raw_text.split('\n')
+        recognized = extract_kanji_from_text(lines[0]) if lines else ""
+        existence_check = lines[1].strip() if len(lines) > 1 else ""
 
-        # targetKanjiと一致するか判定
-        ok = (recognized == request.targetKanji) if recognized else False
-        print(f"[DEBUG] 判定結果: {'正解' if ok else '不正解'} (目標: {request.targetKanji}, 認識: {recognized})")
+        print(f"[DEBUG] 認識された漢字: '{recognized}'")
+        print(f"[DEBUG] 存在判定: '{existence_check}'")
+
+        # 存在する漢字かどうかを判定
+        ok = recognized != "" and "存在する" in existence_check
+
+        # メッセージを生成
+        if not recognized:
+            message = "漢字を認識できませんでした"
+        elif ok:
+            message = f"「{recognized}」は実在する漢字です！"
+        else:
+            message = f"「{recognized}」は実在しない漢字です"
+
+        print(f"[DEBUG] 判定結果: {'正解（実在する）' if ok else '不正解（実在しない/不明）'}")
 
         return JudgeResponse(
             ok=ok,
             recognized=recognized,
-            confidence=None,  # Gemini APIからconfidenceは取得しない
-            rawText=raw_text
+            confidence=None,
+            rawText=raw_text,
+            message=message
         )
 
     except Exception as e:
