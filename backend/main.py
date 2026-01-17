@@ -1,15 +1,20 @@
 import os
 import re
 import base64
-from typing import Optional
-from fastapi import FastAPI, HTTPException
+from typing import Optional, List
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from sqlalchemy.orm import Session
+from database import get_db, Score, init_db
 
 load_dotenv()
+
+# データベース初期化
+init_db()
 
 app = FastAPI()
 
@@ -115,3 +120,87 @@ async def judge_kanji(request: JudgeRequest):
 async def health_check():
     """ヘルスチェック用エンドポイント"""
     return {"status": "ok", "gemini_api_key_set": bool(GEMINI_API_KEY)}
+
+
+# ========== スコア管理API ==========
+
+class ScoreSubmitRequest(BaseModel):
+    user_name: str
+    score: int
+
+
+class RankingEntry(BaseModel):
+    rank: int
+    user_name: str
+    score: int
+    created_at: str
+
+
+class RankingsResponse(BaseModel):
+    rankings: List[RankingEntry]
+    total_count: int
+
+
+@app.post("/api/scores")
+async def submit_score(request: ScoreSubmitRequest, db: Session = Depends(get_db)):
+    """
+    スコアを登録
+    """
+    try:
+        # 新しいスコアを作成
+        new_score = Score(
+            user_name=request.user_name,
+            score=request.score
+        )
+
+        db.add(new_score)
+        db.commit()
+        db.refresh(new_score)
+
+        print(f"[DEBUG] スコア登録: {request.user_name} - {request.score}点")
+
+        return {
+            "success": True,
+            "message": "Score submitted successfully",
+            "score_id": new_score.id
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+
+@app.get("/api/rankings", response_model=RankingsResponse)
+async def get_rankings(db: Session = Depends(get_db)):
+    """
+    ランキングTOP10を取得
+    同点の場合は日時が早い方が上位
+    """
+    try:
+        # スコアの高い順、同点なら日時の早い順でソート
+        top_scores = db.query(Score)\
+            .order_by(Score.score.desc(), Score.created_at.asc())\
+            .limit(10)\
+            .all()
+
+        # 総スコア数を取得
+        total_count = db.query(Score).count()
+
+        # ランキングデータを構築
+        rankings = [
+            RankingEntry(
+                rank=idx + 1,
+                user_name=score.user_name,
+                score=score.score,
+                created_at=score.created_at.isoformat() + "Z"
+            )
+            for idx, score in enumerate(top_scores)
+        ]
+
+        return RankingsResponse(
+            rankings=rankings,
+            total_count=total_count
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
