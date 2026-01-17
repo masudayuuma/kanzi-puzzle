@@ -43,17 +43,18 @@ export default function GamePage() {
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
 
-  // キャンバス矩形を計算（中央に配置）
+  // キャンバス矩形を計算（正方形、中央に配置）
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-  
-  const canvasWidth = clamp(dimensions.width * 0.55, 520, 860);
-  const canvasHeight = clamp(dimensions.height * 0.35, 260, 520);
-  
+
+  // 画面サイズに応じた正方形のサイズを計算
+  const maxCanvasSize = Math.min(dimensions.width * 0.5, dimensions.height * 0.6);
+  const canvasSize = clamp(maxCanvasSize, 400, 600);
+
   const canvasRect = {
-    x: (dimensions.width - canvasWidth) / 2,
-    y: (dimensions.height - canvasHeight) / 2,
-    width: canvasWidth,
-    height: canvasHeight,
+    x: (dimensions.width - canvasSize) / 2,
+    y: (dimensions.height - canvasSize) / 2,
+    width: canvasSize,
+    height: canvasSize,
   };
 
   const handleAddPart = (partId: string) => {
@@ -158,14 +159,17 @@ export default function GamePage() {
   }, [isSubmitting]); // handleSubmitは依存に含めない（無限ループ防止）
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      style={{ 
+      style={{
         position: 'relative',
-        width: '100vw', 
-        height: '100vh', 
+        width: '100vw',
+        height: '100vh',
         overflow: 'hidden',
-        background: '#000',
+        backgroundImage: 'url(/game-back.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
       }}
     >
       {/* 4方向レーン（ConveyorPalette） */}
@@ -196,7 +200,6 @@ export default function GamePage() {
           width: `${canvasRect.width}px`,
           height: `${canvasRect.height}px`,
           background: '#fff',
-          border: '4px solid #4A90E2',
           borderRadius: '8px',
           overflow: 'hidden',
           zIndex: 10,

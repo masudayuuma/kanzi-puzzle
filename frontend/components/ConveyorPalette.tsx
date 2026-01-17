@@ -326,44 +326,50 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
   // レーン矩形計算（キャンバスを囲う配置）
   // ========================================
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-  const laneThickness = clamp(containerHeight * 0.08, 48, 72);
-  const gap = 24; // キャンバスとレーンの間隔
+  // レーンの厚みを適切なサイズに調整
+  const laneThickness = clamp(canvasRect.width * 0.15, 60, 100);
+  const gap = 0; // キャンバスとレーンの間隔
 
   const laneRects = {
     TOP: {
-      left: 0,
+      left: canvasRect.x,
       top: canvasRect.y - gap - laneThickness,
-      width: containerWidth,
+      width: canvasRect.width,
       height: laneThickness,
     },
     RIGHT: {
       left: canvasRect.x + canvasRect.width + gap,
-      top: 0,
+      top: canvasRect.y,
       width: laneThickness,
-      height: containerHeight,
+      height: canvasRect.height,
     },
     BOTTOM: {
-      left: 0,
+      left: canvasRect.x,
       top: canvasRect.y + canvasRect.height + gap,
-      width: containerWidth,
+      width: canvasRect.width,
       height: laneThickness,
     },
     LEFT: {
       left: canvasRect.x - gap - laneThickness,
-      top: 0,
+      top: canvasRect.y,
       width: laneThickness,
-      height: containerHeight,
+      height: canvasRect.height,
     },
   };
 
-  // コーナーブロッカー（角で繋がらないように分断）
-  const cornerSize = laneThickness + gap;
-  const corners = [
-    { left: 0, top: 0, width: canvasRect.x - gap, height: canvasRect.y - gap }, // 左上
-    { left: canvasRect.x + canvasRect.width + gap, top: 0, width: containerWidth - (canvasRect.x + canvasRect.width + gap), height: canvasRect.y - gap }, // 右上
-    { left: canvasRect.x + canvasRect.width + gap, top: canvasRect.y + canvasRect.height + gap, width: containerWidth - (canvasRect.x + canvasRect.width + gap), height: containerHeight - (canvasRect.y + canvasRect.height + gap) }, // 右下
-    { left: 0, top: canvasRect.y + canvasRect.height + gap, width: canvasRect.x - gap, height: containerHeight - (canvasRect.y + canvasRect.height + gap) }, // 左下
-  ];
+  // レーンごとの背景画像スタイル
+  const getLaneBackground = (lane: LaneType): React.CSSProperties => {
+    const isHorizontal = lane === 'TOP' || lane === 'BOTTOM';
+    const railImage = isHorizontal ? '/horizontal-rail.png' : '/vertical-rail.png';
+
+    return {
+      backgroundImage: `url('${railImage}')`,
+      backgroundSize: isHorizontal ? 'auto 100%' : '100% auto',
+      backgroundRepeat: 'repeat',
+      backgroundPosition: 'center',
+    };
+  };
+
 
   return (
     <>
@@ -408,6 +414,7 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
       {/* 4レーン描画 */}
       {(Object.keys(laneRects) as LaneType[]).map((lane) => {
         const rect = laneRects[lane];
+        const backgroundStyle = getLaneBackground(lane);
         return (
           <div
             key={lane}
@@ -417,9 +424,10 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
               top: `${rect.top}px`,
               width: `${rect.width}px`,
               height: `${rect.height}px`,
-              background: 'linear-gradient(135deg, #1a1a3e 0%, #0f0f2e 100%)',
-              border: '2px solid rgba(255, 255, 255, 0.1)',
+              ...backgroundStyle,
+              border: '2px solid rgba(139, 115, 85, 0.6)',
               overflow: 'hidden',
+              boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.3)',
             }}
           >
             {/* レーンラベル */}
@@ -429,10 +437,14 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
                 top: '50%',
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
-                color: 'rgba(255, 255, 255, 0.2)',
+                color: '#fff',
                 fontSize: '14px',
                 fontWeight: 'bold',
                 pointerEvents: 'none',
+                textShadow: '0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)',
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                padding: '4px 8px',
+                borderRadius: '4px',
               }}
             >
               {lane} [{LANE_CONFIG[lane].key}]
@@ -483,22 +495,6 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
           </div>
         );
       })}
-
-      {/* コーナーブロッカー（角で繋がらないように分断） */}
-      {corners.map((corner, index) => (
-        <div
-          key={`corner-${index}`}
-          style={{
-            position: 'absolute',
-            left: `${corner.left}px`,
-            top: `${corner.top}px`,
-            width: `${corner.width}px`,
-            height: `${corner.height}px`,
-            background: '#000',
-            zIndex: 5,
-          }}
-        />
-      ))}
     </>
   );
 };
