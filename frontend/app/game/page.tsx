@@ -14,24 +14,30 @@ interface JudgeResult {
   message: string;
 }
 
+type GridArea = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
 export default function GamePage() {
   const [placedParts, setPlacedParts] = useState<PlacedPart[]>([]);
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const canvasRef = useRef<CanvasStageRef>(null);
-  const [judgeResult, setJudgeResult] = useState<JudgeResult | null>(null);
+  const [judgeResults, setJudgeResults] = useState<Record<GridArea, JudgeResult | null>>({
+    'top-left': null,
+    'top-right': null,
+    'bottom-left': null,
+    'bottom-right': null,
+  });
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [aiScore, setAiScore] = useState(0); // AI判定による正解スコア
-  const [typingScore, setTypingScore] = useState(0); // タイピングゲームのスコア
-  const [typingMiss, setTypingMiss] = useState(0); // タイピングゲームのミス数
+  const [aiScore, setAiScore] = useState(0);
+  const [typingScore, setTypingScore] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // BGM再生
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.volume = 0.1; // 音量を10%に設定
-      audioRef.current.loop = true; // ループ再生
+      audioRef.current.volume = 0.1;
+      audioRef.current.loop = true;
       audioRef.current.play().catch(err => {
         console.log('BGM autoplay prevented:', err);
       });
@@ -63,8 +69,6 @@ export default function GamePage() {
 
   // キャンバス矩形を計算（正方形、中央に配置）
   const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-
-  // 画面サイズに応じた正方形のサイズを計算
   const maxCanvasSize = Math.min(dimensions.width * 0.5, dimensions.height * 0.6);
   const canvasSize = clamp(maxCanvasSize, 400, 600);
 
@@ -75,11 +79,43 @@ export default function GamePage() {
     height: canvasSize,
   };
 
+  // 4つのグリッドエリアの定義
+  const gridAreas: Record<GridArea, { x: number; y: number; width: number; height: number; label: string }> = {
+    'top-left': {
+      x: 0,
+      y: 0,
+      width: canvasSize / 2,
+      height: canvasSize / 2,
+      label: '編集エリア',
+    },
+    'top-right': {
+      x: canvasSize / 2,
+      y: 0,
+      width: canvasSize / 2,
+      height: canvasSize / 2,
+      label: '提出1',
+    },
+    'bottom-left': {
+      x: 0,
+      y: canvasSize / 2,
+      width: canvasSize / 2,
+      height: canvasSize / 2,
+      label: '提出2',
+    },
+    'bottom-right': {
+      x: canvasSize / 2,
+      y: canvasSize / 2,
+      width: canvasSize / 2,
+      height: canvasSize / 2,
+      label: '提出3',
+    },
+  };
+
   const handleAddPart = (partId: string) => {
     const newPart: PlacedPart = {
       instanceId: uuidv4(),
       partId,
-      x: 100 + Math.random() * 100, // ランダムな位置に配置
+      x: 100 + Math.random() * 100,
       y: 100 + Math.random() * 100,
       scale: 1,
       rotation: 0,
@@ -108,80 +144,96 @@ export default function GamePage() {
   const handleReset = () => {
     setPlacedParts([]);
     setSelectedInstanceId(null);
-    setJudgeResult(null);
     setError(null);
-    // スコアはリセットしない（ゲーム終了時に累積スコアを保持）
   };
 
-  const handleSubmit = async () => {
-    // キャンバスに何もない場合は処理しない
-    if (placedParts.length === 0) return;
+  // 指定されたグリッドエリア内のパーツのみをAI判定
+  const handleSubmitArea = async (area: GridArea) => {
+    const areaRect = gridAreas[area];
 
-    // 非同期でAI判定を実行（ゲームを止めない）
-    (async () => {
-      try {
-        // キャンバスから画像を取得
-        const dataUrl = canvasRef.current?.toDataURL();
-        if (!dataUrl) {
-          throw new Error('キャンバスから画像を取得できませんでした');
-        }
+    // そのエリア内のパーツを抽出
+    const partsInArea = placedParts.filter((part) => {
+      return (
+        part.x >= areaRect.x &&
+        part.x < areaRect.x + areaRect.width &&
+        part.y >= areaRect.y &&
+        part.y < areaRect.y + areaRect.height
+      );
+    });
 
-        // キャンバスをクリア（リクエスト送信後すぐに）
-        setPlacedParts([]);
-        setSelectedInstanceId(null);
+    if (partsInArea.length === 0) return;
 
-        // FastAPI に送信
-        const response = await fetch('http://localhost:8000/api/judge', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            imageDataUrl: dataUrl,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-          throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-        }
-
-        const result: JudgeResult = await response.json();
-        setJudgeResult(result);
-
-        // 正解なら文字数に応じてスコア加算
-        if (result.ok) {
-          const length = result.recognized.length;
-          let points = 0;
-          if (length === 2) {
-            points = 2;  // 二字熟語: 2点
-          } else if (length === 3) {
-            points = 16; // 三字熟語: 16点
-          } else if (length >= 4) {
-            points = 64; // 四字熟語以上: 64点
-          }
-          setAiScore((prevScore) => prevScore + points);
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : '不明なエラーが発生しました';
-        setError(message);
-        console.error('Submit error:', err);
+    try {
+      const dataUrl = canvasRef.current?.toDataURL();
+      if (!dataUrl) {
+        throw new Error('キャンバスから画像を取得できませんでした');
       }
-    })();
+
+      // エリアの部分だけを切り取った画像を作成
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise((resolve) => { img.onload = resolve; });
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = areaRect.width;
+      tempCanvas.height = areaRect.height;
+      const ctx = tempCanvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      // エリアの部分を切り取り
+      ctx.drawImage(
+        img,
+        areaRect.x, areaRect.y, areaRect.width, areaRect.height,
+        0, 0, areaRect.width, areaRect.height
+      );
+
+      const croppedDataUrl = tempCanvas.toDataURL();
+
+      // FastAPI に送信
+      const response = await fetch('http://localhost:8000/api/judge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageDataUrl: croppedDataUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+      }
+
+      const result: JudgeResult = await response.json();
+
+      // 判定結果を保存
+      setJudgeResults((prev) => ({ ...prev, [area]: result }));
+
+      // 正解なら文字数に応じてスコア加算
+      if (result.ok) {
+        const length = result.recognized.length;
+        let points = 0;
+        if (length === 2) {
+          points = 2;  // 二字熟語: 2点
+        } else if (length === 3) {
+          points = 16; // 三字熟語: 16点
+        } else if (length >= 4) {
+          points = 64; // 四字熟語以上: 64点
+        }
+        setAiScore((prevScore) => prevScore + points);
+
+        // 正解したエリアのパーツをクリア
+        setPlacedParts((parts) =>
+          parts.filter((part) => !partsInArea.find((p) => p.instanceId === part.instanceId))
+        );
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(message);
+      console.error('Submit error:', err);
+    }
   };
-
-  // Spaceキーでのジャッジ実行
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        e.preventDefault();
-        handleSubmit();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [placedParts]); // handleSubmitは依存に含めない（無限ループ防止）
 
   return (
     <div
@@ -199,6 +251,7 @@ export default function GamePage() {
     >
       {/* BGM */}
       <audio ref={audioRef} src="/sounds/gamesound.mp3" />
+
       {/* 4方向レーン（ConveyorPalette） */}
       {dimensions.width > 0 && dimensions.height > 0 && (
         <ConveyorPalette
@@ -210,14 +263,13 @@ export default function GamePage() {
             setTypingScore(score);
           }}
           onGameEnd={(finalScore) => {
-            // タイピングスコアとAI判定スコアを合算してゲーム終了ページへ
             const totalScore = finalScore + aiScore;
             window.location.href = `/gameend?score=${totalScore}`;
           }}
         />
       )}
 
-      {/* 中央キャンバス */}
+      {/* 中央キャンバス（1つの大きなcanvas） */}
       <div
         style={{
           position: 'absolute',
@@ -229,8 +281,10 @@ export default function GamePage() {
           borderRadius: '8px',
           overflow: 'hidden',
           zIndex: 10,
+          border: '3px solid #4A90E2',
         }}
       >
+        {/* Canvas */}
         <CanvasStage
           ref={canvasRef}
           placedParts={placedParts}
@@ -238,6 +292,116 @@ export default function GamePage() {
           onSelectPart={setSelectedInstanceId}
           onUpdatePartPosition={handleUpdatePartPosition}
         />
+
+        {/* 点線グリッド（縦線） */}
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: 0,
+            width: '2px',
+            height: '100%',
+            backgroundImage: 'linear-gradient(to bottom, #999 50%, transparent 50%)',
+            backgroundSize: '2px 8px',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* 点線グリッド（横線） */}
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: '50%',
+            width: '100%',
+            height: '2px',
+            backgroundImage: 'linear-gradient(to right, #999 50%, transparent 50%)',
+            backgroundSize: '8px 2px',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* 各エリアのラベルと提出ボタン */}
+        {(Object.keys(gridAreas) as GridArea[]).map((area) => {
+          const areaData = gridAreas[area];
+          const isEditArea = area === 'top-left';
+
+          return (
+            <div
+              key={area}
+              style={{
+                position: 'absolute',
+                left: `${areaData.x}px`,
+                top: `${areaData.y}px`,
+                width: `${areaData.width}px`,
+                height: `${areaData.height}px`,
+                pointerEvents: 'none',
+              }}
+            >
+              {/* エリアラベル */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '8px',
+                  left: '8px',
+                  padding: '4px 8px',
+                  background: isEditArea ? 'rgba(74, 144, 226, 0.9)' : 'rgba(39, 174, 96, 0.9)',
+                  color: 'white',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                }}
+              >
+                {areaData.label}
+              </div>
+
+              {/* 提出ボタン（編集エリア以外） */}
+              {!isEditArea && (
+                <button
+                  onClick={() => handleSubmitArea(area)}
+                  style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    backgroundColor: '#27AE60',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    pointerEvents: 'auto',
+                  }}
+                >
+                  AI判定
+                </button>
+              )}
+
+              {/* 判定結果表示 */}
+              {judgeResults[area] && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '35px',
+                    left: '8px',
+                    right: '8px',
+                    padding: '6px',
+                    backgroundColor: judgeResults[area]!.ok
+                      ? 'rgba(39, 174, 96, 0.9)'
+                      : 'rgba(231, 76, 60, 0.9)',
+                    color: 'white',
+                    borderRadius: '4px',
+                    fontSize: '10px',
+                  }}
+                >
+                  {judgeResults[area]!.ok ? '✅ 正解！' : '❌ 不正解'}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* コントロールパネル（右下固定） */}
@@ -252,13 +416,13 @@ export default function GamePage() {
           zIndex: 100,
         }}
       >
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={handleDelete}
             disabled={!selectedInstanceId}
             style={{
-              padding: '10px 20px',
-              fontSize: '14px',
+              padding: '8px 16px',
+              fontSize: '13px',
               backgroundColor: selectedInstanceId ? '#E74C3C' : '#555',
               color: 'white',
               border: 'none',
@@ -271,8 +435,8 @@ export default function GamePage() {
           <button
             onClick={handleReset}
             style={{
-              padding: '10px 20px',
-              fontSize: '14px',
+              padding: '8px 16px',
+              fontSize: '13px',
               backgroundColor: '#95A5A6',
               color: 'white',
               border: 'none',
@@ -282,40 +446,7 @@ export default function GamePage() {
           >
             リセット
           </button>
-          <button
-            onClick={handleSubmit}
-            disabled={placedParts.length === 0}
-            style={{
-              padding: '10px 20px',
-              fontSize: '14px',
-              backgroundColor: placedParts.length === 0 ? '#95A5A6' : '#27AE60',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: placedParts.length === 0 ? 'not-allowed' : 'pointer',
-            }}
-          >
-            AI判定
-          </button>
         </div>
-
-        {/* 判定結果 */}
-        {judgeResult && (
-          <div
-            style={{
-              padding: '12px',
-              backgroundColor: judgeResult.ok ? 'rgba(39, 174, 96, 0.9)' : 'rgba(231, 76, 60, 0.9)',
-              color: 'white',
-              borderRadius: '8px',
-              fontSize: '14px',
-            }}
-          >
-            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
-              {judgeResult.ok ? '✅ 実在する漢字です！' : '❌ 実在しない漢字です'}
-            </div>
-            <div>{judgeResult.message}</div>
-          </div>
-        )}
 
         {/* エラー表示 */}
         {error && (
