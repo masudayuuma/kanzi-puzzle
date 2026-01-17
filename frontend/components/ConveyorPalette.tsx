@@ -134,21 +134,38 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
   }, [gameState.score, gameState.miss, onScoreChange]);
 
   // ========================================
-  // スポーン位置計算
+  // スポーン位置計算（レーンの幅に対して中央配置）
   // ========================================
   const getSpawnPosition = useCallback((lane: LaneType): { x: number; y: number } => {
-    const laneThick = clamp(containerHeight * 0.08, 48, 72);
-    const gap = 24;
+    const laneThickness = clamp(canvasRect.width * 0.15, 60, 100); // レーン描画と同じ厚さ
+    const gap = 0; // レーン描画と同じギャップ
     
+    // レーンの中心座標を計算（各レーンの厚みの中央に配置）
     switch (lane) {
       case 'TOP':
-        return { x: 0, y: canvasRect.y - gap - laneThick / 2 };
+        // 左端からスタート、レーンの中心のy座標
+        return { 
+          x: 0, 
+          y: canvasRect.y - gap - laneThickness / 2 
+        };
       case 'RIGHT':
-        return { x: canvasRect.x + canvasRect.width + gap + laneThick / 2, y: 0 };
+        // レーンの中心のx座標、上端からスタート
+        return { 
+          x: canvasRect.x + canvasRect.width + gap + laneThickness / 2, 
+          y: 0 
+        };
       case 'BOTTOM':
-        return { x: containerWidth, y: canvasRect.y + canvasRect.height + gap + laneThick / 2 };
+        // 右端からスタート、レーンの中心のy座標
+        return { 
+          x: containerWidth, 
+          y: canvasRect.y + canvasRect.height + gap + laneThickness / 2 
+        };
       case 'LEFT':
-        return { x: canvasRect.x - gap - laneThick / 2, y: containerHeight };
+        // レーンの中心のx座標、下端からスタート
+        return { 
+          x: canvasRect.x - gap - laneThickness / 2, 
+          y: containerHeight 
+        };
     }
   }, [canvasRect, containerWidth, containerHeight]);
 
@@ -438,16 +455,16 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 color: '#fff',
-                fontSize: '14px',
+                fontSize: '24px',
                 fontWeight: 'bold',
                 pointerEvents: 'none',
                 textShadow: '0 2px 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.5)',
                 backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                padding: '4px 8px',
+                padding: '8px 12px',
                 borderRadius: '4px',
               }}
             >
-              {lane} [{LANE_CONFIG[lane].key}]
+              {LANE_CONFIG[lane].key}
             </div>
 
             {/* このレーンのアイテム */}
@@ -467,7 +484,6 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
                     border: '3px solid #8b7355',
                     borderRadius: '8px',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '24px',
@@ -477,19 +493,6 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
                   }}
                 >
                   <div>{item.radical}</div>
-                  <div
-                    style={{
-                      fontSize: '10px',
-                      fontWeight: 'bold',
-                      color: '#fff',
-                      background: '#555',
-                      padding: '2px 4px',
-                      borderRadius: '3px',
-                      marginTop: '2px',
-                    }}
-                  >
-                    {item.key}
-                  </div>
                 </div>
               ))}
           </div>
