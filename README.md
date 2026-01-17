@@ -1,85 +1,380 @@
-あなたは熟練のフルスタックエンジニアです。
-Next.js(App Router) + TypeScript のReactアプリに、漢字パーツを配置するパズルのMVPを実装してください。
-要件は「Step1」のみで、まず動くものを最短で作ってください。
+# 漢字パズル (Kanzi Puzzle)
 
-# 目的（Step1）
-- 左側に「パーツパレット」
-- 右側に「キャンバス（Konva Stage）」
-- パレットのパーツをクリックすると、キャンバスにそのパーツが1つ追加される
-- キャンバス上のパーツはドラッグして移動できる
-- クリックで選択状態にできる（選択中は枠線などで分かるように）
-- 「削除」ボタンで選択中のパーツを削除できる
-- 「リセット」ボタンでキャンバスを空にできる
-- お題として「休」を画面上部に表示（まだ判定は不要、提出ボタンはダミーでも可）
+漢字パーツを配置してパズルを作成し、Gemini AIで自動判定するゲーム
 
-# 技術スタック
-- Next.js App Router
-- React + TypeScript
-- react-konva / konva を使う
-- スタイリングは最小でOK（簡単なCSSまたはTailwindどちらでも良い）
+## 📋 目次
 
-# パーツ（Step1は2つだけ）
-- 「亻」(person) と 「木」(tree)
-- 画像は public/parts/person.png と public/parts/tree.png を参照する実装にする
-  - もし画像が存在しない場合でも動作確認できるように、画像が読み込めない時はテキスト表示（例：「亻」「木」）で代替表示する
-- パレットにはこの2つを表示する
+- [プロジェクト構成](#プロジェクト構成)
+- [クイックスタート](#クイックスタート)
+- [詳細セットアップ](#詳細セットアップ)
+- [機能](#機能)
+- [技術スタック](#技術スタック)
+- [トラブルシューティング](#トラブルシューティング)
 
-# データ構造（目安）
-Part:
-- id: string ("person" | "tree")
-- label: string ("亻" | "木")
-- imageSrc: string ("/parts/person.png" など)
+## 📁 プロジェクト構成
 
-PlacedPart:
-- instanceId: string (uuidなど一意)
-- partId: string
-- x: number
-- y: number
-- scale: number (Step1は固定1でもOK)
-- rotation: number (Step1は固定0でもOK)
-- zIndex: number (Step1は追加順でOK)
+```
+kanzi-puzzle/
+├── frontend/               # フロントエンド (Next.js)
+│   ├── app/               # Next.js App Router
+│   │   ├── game/         # ゲームページ
+│   │   │   └── page.tsx
+│   │   ├── layout.tsx    # ルートレイアウト
+│   │   └── page.tsx      # ホームページ
+│   ├── components/        # Reactコンポーネント
+│   │   ├── CanvasStage.tsx    # キャンバス描画
+│   │   └── Palette.tsx        # パーツパレット
+│   ├── data/             # データ定義
+│   │   └── parts.ts      # パーツ定義
+│   ├── public/           # 静的ファイル
+│   ├── package.json      # npm依存関係
+│   ├── next.config.js    # Next.js設定
+│   ├── tsconfig.json     # TypeScript設定
+│   └── README.md         # フロントエンド詳細ドキュメント
+│
+├── backend/               # バックエンド (FastAPI)
+│   ├── main.py           # FastAPI アプリケーション
+│   ├── requirements.txt  # Python依存パッケージ
+│   ├── .env.example      # 環境変数テンプレート
+│   ├── .env              # 環境変数 (gitignore)
+│   └── README.md         # バックエンド詳細ドキュメント
+│
+├── README.md             # このファイル (プロジェクト全体のドキュメント)
+├── QUICKSTART.md         # 5分で起動するガイド
+└── .gitignore            # Git除外設定
+```
 
-React state:
-- placedParts: PlacedPart[]
-- selectedInstanceId: string | null
+## 🚀 クイックスタート
 
-# UI仕様
-- app/game/page.tsx を新規作成し、このページでゲームが動くようにする
-- レイアウトは2カラム（左パレット、右キャンバス）
-- Headerに「漢字パズル（お題：休）」を表示
-- Footerまたは右上にボタン:
-  - 「削除」(選択中が無ければdisabled)
-  - 「リセット」
-  - 「提出」(クリックしてもまだ何もしない or alert表示でOK)
+### 必要な環境
 
-# Konva実装要件
-- Stageのサイズは初期で width=600 height=500 程度（レスポンシブは後回し）
-- placedParts を map して Konva.Image (推奨) もしくは Konva.Text で描画する
-- ドラッグ移動後は state の x,y を更新する（onDragEndで反映）
-- クリックで選択状態（selectedInstanceIdを更新）
-- 選択中のパーツは分かるように stroke などを付ける
-  - Imageだとstrokeが難しい場合、Rectを背面に描くなどで良い
+- **Node.js**: 18.x 以上
+- **Python**: 3.8 以上
+- **Gemini API Key**: [Google AI Studio](https://aistudio.google.com/app/apikey) で取得
 
-# 画像読み込み
-- Konva.Imageを使う場合、useImageフック（react-konvaの推奨パターン）で読み込む
-- 画像が読み込めない時はKonva.Textでラベルを表示するfallbackを必ず入れる
+### 起動手順（初回）
 
-# ファイル構成（提案）
-- app/game/page.tsx
-- components/Palette.tsx
-- components/CanvasStage.tsx
-- components/PlacedPartNode.tsx
-- data/parts.ts
+#### 1. リポジトリのクローン
 
-ただし簡略化して2〜3ファイルでも良い。まず動けばOK。
+```bash
+git clone <repository-url>
+cd kanzi-puzzle
+```
 
-# 完了条件（Step1）
-- パレットからクリックで複数パーツを追加できる
-- 追加したパーツをドラッグして移動できる
-- クリックで選択でき、削除ボタンで消せる
-- リセットで全消去できる
-- エラーなく起動できる
+#### 2. バックエンドのセットアップ
 
-# 出力
-- 変更/追加した全ファイルのコードを提示してください
-- 依存ライブラリの追加が必要なら、npm installコマンドも併記してください
+```bash
+# backendディレクトリに移動
+cd backend
+
+# Python仮想環境の作成
+python3 -m venv venv
+
+# 仮想環境の有効化
+# macOS/Linux:
+source venv/bin/activate
+# Windows:
+# venv\Scripts\activate
+
+# 依存パッケージのインストール
+pip install -r requirements.txt
+
+# 環境変数ファイルの作成
+cp .env.example .env
+
+# .envファイルを編集してGEMINI_API_KEYを設定
+# vim .env または任意のエディタで開く
+```
+
+**.env ファイル内容:**
+```
+GEMINI_API_KEY=your_actual_api_key_here
+```
+
+#### 3. フロントエンドのセットアップ
+
+```bash
+# プロジェクトルートに戻る
+cd ..
+
+# frontendディレクトリに移動
+cd frontend
+
+# 依存パッケージのインストール
+npm install
+```
+
+#### 4. アプリケーションの起動
+
+**ターミナル1 (バックエンド):**
+```bash
+cd backend
+source venv/bin/activate  # 仮想環境を有効化
+uvicorn main:app --reload --port 8000
+```
+
+**ターミナル2 (フロントエンド):**
+```bash
+cd frontend
+npm run dev
+```
+
+#### 5. アクセス
+
+- **フロントエンド**: http://localhost:3000/game
+- **バックエンドAPI**: http://localhost:8000
+- **API ヘルスチェック**: http://localhost:8000/health
+
+## 📖 詳細セットアップ
+
+### フロントエンド (Next.js)
+
+**場所**: `frontend/` ディレクトリ
+
+**詳細ドキュメント**: [frontend/README.md](frontend/README.md)
+
+**セットアップ:**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**主要ファイル:**
+- `app/game/page.tsx` - ゲームメインページ
+- `components/CanvasStage.tsx` - HTML5 Canvas によるパーツ描画
+- `components/Palette.tsx` - パーツ選択パレット
+- `data/parts.ts` - パーツデータ定義
+
+**ビルド (本番環境):**
+```bash
+cd frontend
+npm run build
+npm start
+```
+
+### バックエンド (FastAPI)
+
+**場所**: `backend/` ディレクトリ
+
+**詳細ドキュメント**: [backend/README.md](backend/README.md)
+
+**セットアップ:**
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+# .env を編集して GEMINI_API_KEY を設定
+uvicorn main:app --reload --port 8000
+```
+
+**API エンドポイント:**
+- `POST /api/judge` - 漢字判定
+- `GET /health` - ヘルスチェック
+
+**環境変数:**
+- `GEMINI_API_KEY` - Google Gemini API キー（必須）
+
+## ✨ 機能
+
+### Step1: 基本的なパズル機能
+- 左側のパレットから漢字パーツ（亻、木）を選択
+- キャンバス上にパーツを配置
+- ドラッグ&ドロップでパーツを移動
+- パーツをクリックして選択（青い枠で表示）
+- 削除ボタンで選択したパーツを削除
+- リセットボタンで全パーツをクリア
+
+### Step2: Gemini AI判定機能 ✅ 完了
+- 提出ボタンでキャンバスの画像をPNG形式でエクスポート
+- FastAPI経由でGemini APIに画像を送信
+- AIが認識した漢字を表示
+- 目標漢字（例: 「休」）との一致判定
+- 正解/不正解の視覚的表示
+- エラーハンドリング
+
+## 🛠 技術スタック
+
+### フロントエンド
+| 技術 | バージョン | 用途 |
+|------|-----------|------|
+| Next.js | 15.1.0 | Reactフレームワーク (App Router) |
+| React | 18.3.1 | UIライブラリ |
+| TypeScript | 5.x | 型安全な開発 |
+| HTML5 Canvas | - | パーツ描画 |
+| UUID | 11.0.3 | パーツの一意識別 |
+
+### バックエンド
+| 技術 | バージョン | 用途 |
+|------|-----------|------|
+| FastAPI | 0.115.6 | Web APIフレームワーク |
+| Google GenAI SDK | 1.58.0 | Gemini API統合 |
+| Python Dotenv | 1.0.1 | 環境変数管理 |
+| Uvicorn | 0.32.1 | ASGIサーバー |
+
+### アーキテクチャ
+- **フロントエンド**: CSR (Client Side Rendering) + API連携
+- **バックエンド**: RESTful API + AI統合
+- **通信**: JSON over HTTP
+- **セキュリティ**: APIキーはバックエンドのみで管理、CORS制限
+
+## 🔐 セキュリティ
+
+1. **APIキー管理**
+   - Gemini APIキーは `backend/.env` でのみ管理
+   - フロントエンドには絶対に露出しない
+   - `.gitignore` で `.env` を除外
+
+2. **CORS設定**
+   - `localhost:3000` のみ許可
+   - 本番環境では適切なドメインに変更が必要
+
+3. **データ検証**
+   - Pydanticによるリクエスト/レスポンス検証
+   - 画像データのbase64検証
+
+## 🐛 トラブルシューティング
+
+### フロントエンドが起動しない
+
+**症状**: `npm run dev` でエラー
+
+**解決策**:
+```bash
+# node_modules を削除して再インストール
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**確認事項**:
+- Node.js 18.x 以上がインストールされているか
+- `package.json` が存在するか
+
+### バックエンドが起動しない
+
+**症状**: `uvicorn main:app` でエラー
+
+**解決策**:
+```bash
+# 仮想環境が有効化されているか確認
+# プロンプトに (venv) が表示されているはず
+
+# 再インストール
+pip install --upgrade -r requirements.txt
+```
+
+**確認事項**:
+- Python 3.8 以上がインストールされているか
+- 仮想環境が有効化されているか
+- `.env` ファイルが存在し、`GEMINI_API_KEY` が設定されているか
+
+### Gemini API エラー
+
+**症状**: `429 RESOURCE_EXHAUSTED` エラー
+
+**原因**: APIのクォータ超過
+
+**解決策**:
+1. [Rate Limit Monitor](https://ai.dev/rate-limit) で使用状況を確認
+2. 20秒ほど待ってから再試行
+3. 新しいAPIキーを取得（別プロジェクトで作成）
+4. 有料プランへのアップグレードを検討
+
+**Gemini APIキーの取得**:
+1. [Google AI Studio](https://aistudio.google.com/app/apikey) にアクセス
+2. Googleアカウントでログイン
+3. "Create API Key" をクリック
+4. 生成されたキーを `backend/.env` に貼り付け
+
+### CORS エラー
+
+**症状**: ブラウザコンソールに `CORS policy` エラー
+
+**解決策**:
+- バックエンドが `http://localhost:8000` で起動しているか確認
+- フロントエンドが `http://localhost:3000` で起動しているか確認
+- 別のポートを使う場合は `backend/main.py` の CORS設定を変更:
+
+```python
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # 追加
+    ...
+)
+```
+
+### パーツが動かない
+
+**症状**: パレットからパーツを追加できるが、ドラッグできない
+
+**解決策**:
+- ブラウザのコンソールでエラーを確認
+- ページをリロード (Cmd+R / Ctrl+R)
+- ブラウザのキャッシュをクリア
+
+## 📚 開発ガイド
+
+### ローカル開発の流れ
+
+1. **バックエンド起動**
+   ```bash
+   cd backend
+   source venv/bin/activate
+   uvicorn main:app --reload --port 8000
+   ```
+
+2. **フロントエンド起動**
+   ```bash
+   # 別のターミナルで
+   cd frontend
+   npm run dev
+   ```
+
+3. **開発**
+   - http://localhost:3000/game でテスト
+   - コード変更は自動的にリロードされる
+
+4. **終了時**
+   - 両方のターミナルで `Ctrl+C`
+   - バックエンドの仮想環境を無効化: `deactivate`
+
+### Git管理
+
+**除外されるファイル** (`.gitignore`):
+- `frontend/node_modules/`
+- `frontend/.next/`
+- `backend/venv/`
+- `backend/.env`
+- `*.pyc`
+
+**コミット前の確認**:
+```bash
+git status
+# .env ファイルが含まれていないことを確認
+```
+
+## 🎯 今後の拡張予定
+
+- [ ] パーツの回転・拡大縮小機能
+- [ ] 複数の問題（異なる目標漢字）
+- [ ] スコアリング機能
+- [ ] タイムアタックモード
+- [ ] ヒント機能
+- [ ] アニメーション効果
+- [ ] ユーザー認証
+- [ ] プレイ履歴の保存
+
+## 📝 ライセンス
+
+MIT License
+
+## 🤝 貢献
+
+Issue や Pull Request を歓迎します。
+
+---
+
+**作成日**: 2026-01-17
+**最終更新**: 2026-01-17

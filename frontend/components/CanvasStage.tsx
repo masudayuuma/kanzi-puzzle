@@ -1,7 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { PlacedPart, availableParts } from '@/data/parts';
+
+export interface CanvasStageRef {
+  toDataURL: () => string | null;
+}
 
 interface CanvasStageProps {
   placedParts: PlacedPart[];
@@ -10,12 +14,12 @@ interface CanvasStageProps {
   onUpdatePartPosition: (instanceId: string, x: number, y: number) => void;
 }
 
-const CanvasStage = ({
+const CanvasStage = forwardRef<CanvasStageRef, CanvasStageProps>(({
   placedParts,
   selectedInstanceId,
   onSelectPart,
   onUpdatePartPosition,
-}: CanvasStageProps) => {
+}, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [draggedPart, setDraggedPart] = useState<string | null>(null);
   const draggedPartRef = useRef<string | null>(null);
@@ -23,6 +27,15 @@ const CanvasStage = ({
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const [images, setImages] = useState<Map<string, HTMLImageElement>>(new Map());
   const [isDragging, setIsDragging] = useState(false);
+
+  // 親コンポーネントから呼び出せるメソッドを公開
+  useImperativeHandle(ref, () => ({
+    toDataURL: () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      return canvas.toDataURL('image/png', 1.0);
+    }
+  }));
 
   // 画像の読み込み
   useEffect(() => {
@@ -198,6 +211,8 @@ const CanvasStage = ({
       />
     </div>
   );
-};
+});
+
+CanvasStage.displayName = 'CanvasStage';
 
 export default CanvasStage;
