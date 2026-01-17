@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { PlacedPart, availableParts } from '@/data/parts';
+import { PlacedPart } from '@/data/parts';
 import ConveyorPalette from '@/components/ConveyorPalette';
 import CanvasStage, { CanvasStageRef } from '@/components/CanvasStage';
 
@@ -20,8 +20,39 @@ export default function GamePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [judgeResult, setJudgeResult] = useState<JudgeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   const TARGET_KANJI = '休';
+
+  // コンテナサイズを取得
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        setDimensions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight,
+        });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  // キャンバス矩形を計算（中央に配置）
+  const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+  
+  const canvasWidth = clamp(dimensions.width * 0.55, 520, 860);
+  const canvasHeight = clamp(dimensions.height * 0.35, 260, 520);
+  
+  const canvasRect = {
+    x: (dimensions.width - canvasWidth) / 2,
+    y: (dimensions.height - canvasHeight) / 2,
+    width: canvasWidth,
+    height: canvasHeight,
+  };
 
   const handleAddPart = (partId: string) => {
     const newPart: PlacedPart = {
@@ -61,6 +92,8 @@ export default function GamePage() {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return; // 多重実行防止
+    
     setIsSubmitting(true);
     setError(null);
     setJudgeResult(null);
@@ -100,147 +133,175 @@ export default function GamePage() {
     }
   };
 
+  // Spaceキーでのジャッジ実行
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && !isSubmitting) {
+        // タイピングゲーム実行中でない場合のみ
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSubmitting, handleSubmit]); // 依存関係を追加
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header
+    <div 
+      ref={containerRef}
+      style={{ 
+        position: 'relative',
+        width: '100vw', 
+        height: '100vh', 
+        overflow: 'hidden',
+        background: '#000',
+      }}
+    >
+      {/* 4方向レーン（ConveyorPalette） */}
+      {dimensions.width > 0 && dimensions.height > 0 && (
+        <ConveyorPalette 
+          onSelectPart={handleAddPart}
+          containerWidth={dimensions.width}
+          containerHeight={dimensions.height}
+          canvasRect={canvasRect}
+        />
+      )}
+
+      {/* 中央キャンバス */}
+      <div
         style={{
-          padding: '20px',
-          backgroundColor: '#4A90E2',
-          color: 'white',
-          textAlign: 'center',
+          position: 'absolute',
+          left: `${canvasRect.x}px`,
+          top: `${canvasRect.y}px`,
+          width: `${canvasRect.width}px`,
+          height: `${canvasRect.height}px`,
+          background: '#fff',
+          border: '4px solid #4A90E2',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          zIndex: 10,
         }}
       >
-        <h1 style={{ margin: 0, fontSize: '28px' }}>
-          漢字パズル（お題：{TARGET_KANJI}）
-        </h1>
-      </header>
+        <CanvasStage
+          ref={canvasRef}
+          placedParts={placedParts}
+          selectedInstanceId={selectedInstanceId}
+          onSelectPart={setSelectedInstanceId}
+          onUpdatePartPosition={handleUpdatePartPosition}
+        />
+      </div>
 
-      {/* Main Content */}
-      <main
+      {/* コントロールパネル（右下固定） */}
+      <div
         style={{
-          flex: 1,
+          position: 'absolute',
+          bottom: '20px',
+          right: '20px',
           display: 'flex',
           flexDirection: 'column',
-          padding: '20px',
-          gap: '20px',
+          gap: '12px',
+          zIndex: 100,
         }}
       >
-        {/* Top: Canvas and Controls */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {/* Controls */}
-          <div
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            onClick={handleDelete}
+            disabled={!selectedInstanceId}
             style={{
-              marginBottom: '16px',
-              display: 'flex',
-              gap: '12px',
-              justifyContent: 'flex-end',
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: selectedInstanceId ? '#E74C3C' : '#555',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: selectedInstanceId ? 'pointer' : 'not-allowed',
             }}
           >
-            <button
-              onClick={handleDelete}
-              disabled={!selectedInstanceId}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: selectedInstanceId ? '#E74C3C' : '#ccc',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: selectedInstanceId ? 'pointer' : 'not-allowed',
-              }}
-            >
-              削除
-            </button>
-            <button
-              onClick={handleReset}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: '#95A5A6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              リセット
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              style={{
-                padding: '10px 20px',
-                fontSize: '16px',
-                backgroundColor: isSubmitting ? '#95A5A6' : '#27AE60',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {isSubmitting ? '判定中...' : '提出'}
-            </button>
-          </div>
-
-          {/* Result Display */}
-          {judgeResult && (
-            <div
-              style={{
-                marginBottom: '16px',
-                padding: '16px',
-                backgroundColor: judgeResult.ok ? '#D5F4E6' : '#F8D7DA',
-                border: `2px solid ${judgeResult.ok ? '#27AE60' : '#E74C3C'}`,
-                borderRadius: '8px',
-              }}
-            >
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px' }}>
-                {judgeResult.ok ? '✅ 正解です！' : '❌ 不正解です'}
-              </h3>
-              <p style={{ margin: '4px 0', fontSize: '16px' }}>
-                <strong>認識結果:</strong> {judgeResult.recognized || '（認識できませんでした）'}
-              </p>
-              <p style={{ margin: '4px 0', fontSize: '14px', color: '#666' }}>
-                <strong>生の返答:</strong> {judgeResult.rawText}
-              </p>
-            </div>
-          )}
-
-          {/* Error Display */}
-          {error && (
-            <div
-              style={{
-                marginBottom: '16px',
-                padding: '16px',
-                backgroundColor: '#F8D7DA',
-                border: '2px solid #E74C3C',
-                borderRadius: '8px',
-              }}
-            >
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#E74C3C' }}>
-                エラーが発生しました
-              </h3>
-              <p style={{ margin: 0, fontSize: '14px' }}>{error}</p>
-            </div>
-          )}
-
-          {/* Canvas */}
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <CanvasStage
-              ref={canvasRef}
-              placedParts={placedParts}
-              selectedInstanceId={selectedInstanceId}
-              onSelectPart={setSelectedInstanceId}
-              onUpdatePartPosition={handleUpdatePartPosition}
-            />
-          </div>
+            削除
+          </button>
+          <button
+            onClick={handleReset}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: '#95A5A6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            リセット
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              backgroundColor: isSubmitting ? '#95A5A6' : '#27AE60',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {isSubmitting ? '判定中...' : 'AI判定'}
+          </button>
         </div>
 
-        {/* Bottom: Conveyor Belt Palette */}
-        <div style={{ marginTop: 'auto' }}>
-          <ConveyorPalette parts={availableParts} onSelectPart={handleAddPart} />
-        </div>
-      </main>
+        {/* 判定結果 */}
+        {judgeResult && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: judgeResult.ok ? 'rgba(39, 174, 96, 0.9)' : 'rgba(231, 76, 60, 0.9)',
+              color: 'white',
+              borderRadius: '8px',
+              fontSize: '14px',
+            }}
+          >
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+              {judgeResult.ok ? '✅ 正解！' : '❌ 不正解'}
+            </div>
+            <div>認識: {judgeResult.recognized || '不明'}</div>
+          </div>
+        )}
+
+        {/* エラー表示 */}
+        {error && (
+          <div
+            style={{
+              padding: '12px',
+              backgroundColor: 'rgba(231, 76, 60, 0.9)',
+              color: 'white',
+              borderRadius: '8px',
+              fontSize: '12px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* タイトル（左上固定） */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
+          padding: '12px 20px',
+          background: 'rgba(74, 144, 226, 0.9)',
+          color: 'white',
+          borderRadius: '8px',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          zIndex: 100,
+        }}
+      >
+        漢字パズル（お題：{TARGET_KANJI}）
+      </div>
     </div>
   );
 }
