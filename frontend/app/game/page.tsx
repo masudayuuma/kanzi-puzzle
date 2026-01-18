@@ -32,6 +32,7 @@ export default function GamePage() {
   const [aiScore, setAiScore] = useState(0);
   const [typingScore, setTypingScore] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [judgingAreas, setJudgingAreas] = useState<Set<GridArea>>(new Set());
 
   // BGM再生 & ゲーム終了画面の画像をプリロード
   useEffect(() => {
@@ -117,11 +118,15 @@ export default function GamePage() {
   };
 
   const handleAddPart = (partId: string) => {
+    // 編集エリア（top-left）の範囲内にランダムに配置
+    const editArea = gridAreas['top-left'];
+    const margin = 20; // エリアの端から少し離す
+
     const newPart: PlacedPart = {
       instanceId: uuidv4(),
       partId,
-      x: 100 + Math.random() * 100,
-      y: 100 + Math.random() * 100,
+      x: editArea.x + margin + Math.random() * (editArea.width - margin * 2),
+      y: editArea.y + margin + Math.random() * (editArea.height - margin * 2),
       scale: 1,
       rotation: 0,
       zIndex: placedParts.length,
@@ -130,6 +135,24 @@ export default function GamePage() {
   };
 
   const handleUpdatePartPosition = (instanceId: string, x: number, y: number) => {
+    // 判定中のエリアかチェック
+    let isInJudgingArea = false;
+    for (const area of judgingAreas) {
+      const areaRect = gridAreas[area];
+      if (
+        x >= areaRect.x &&
+        x < areaRect.x + areaRect.width &&
+        y >= areaRect.y &&
+        y < areaRect.y + areaRect.height
+      ) {
+        isInJudgingArea = true;
+        break;
+      }
+    }
+
+    // 判定中のエリアには配置できない
+    if (isInJudgingArea) return;
+
     setPlacedParts((parts) =>
       parts.map((part) =>
         part.instanceId === instanceId ? { ...part, x, y } : part
@@ -167,6 +190,9 @@ export default function GamePage() {
     });
 
     if (partsInArea.length === 0) return;
+
+    // 判定開始
+    setJudgingAreas((prev) => new Set(prev).add(area));
 
     try {
       const dataUrl = canvasRef.current?.toDataURL();
@@ -215,6 +241,11 @@ export default function GamePage() {
       // 判定結果を保存
       setJudgeResults((prev) => ({ ...prev, [area]: result }));
 
+      // 正解音・不正解音を再生
+      const audio = new Audio(result.ok ? '/sounds/correct.mp3' : '/sounds/no-correct.mp3');
+      audio.volume = 0.6;
+      audio.play().catch(err => console.error('Audio play failed:', err));
+
       // 正解なら文字数に応じてスコア加算
       if (result.ok) {
         const length = result.recognized.length;
@@ -233,10 +264,26 @@ export default function GamePage() {
           parts.filter((part) => !partsInArea.find((p) => p.instanceId === part.instanceId))
         );
       }
+
+      // 2秒後に判定結果を自動で削除
+      setTimeout(() => {
+        setJudgeResults((prev) => {
+          const newResults = { ...prev };
+          delete newResults[area];
+          return newResults;
+        });
+      }, 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : '不明なエラーが発生しました';
       setError(message);
       console.error('Submit error:', err);
+    } finally {
+      // 判定終了
+      setJudgingAreas((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(area);
+        return newSet;
+      });
     }
   };
 
@@ -364,6 +411,7 @@ export default function GamePage() {
               {!isEditArea && (
                 <button
                   onClick={() => handleSubmitArea(area)}
+                  disabled={judgingAreas.has(area)}
                   style={{
                     position: 'absolute',
                     bottom: '8px',
@@ -372,16 +420,51 @@ export default function GamePage() {
                     padding: '6px 12px',
                     fontSize: '12px',
                     fontWeight: 'bold',
-                    backgroundColor: '#27AE60',
+                    backgroundColor: judgingAreas.has(area) ? '#95A5A6' : '#27AE60',
                     color: 'white',
                     border: 'none',
                     borderRadius: '4px',
-                    cursor: 'pointer',
+                    cursor: judgingAreas.has(area) ? 'not-allowed' : 'pointer',
                     pointerEvents: 'auto',
+                    opacity: judgingAreas.has(area) ? 0.6 : 1,
                   }}
                 >
-                  AI判定
+                  {judgingAreas.has(area) ? '判定中...' : 'AI判定'}
                 </button>
+              )}
+
+              {/* 判定中のオーバーレイ */}
+              {judgingAreas.has(area) && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(128, 128, 128, 0.7)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 5,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '12px 20px',
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      color: 'white',
+                      textAlign: 'center',
+                    }}
+                  >
+                    🔍 判定中...<br />
+                    <span style={{ fontSize: '10px', opacity: 0.8 }}>配置不可</span>
+                  </div>
+                </div>
               )}
 
               {/* 判定結果表示 */}
