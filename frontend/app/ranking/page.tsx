@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+
 interface RankingEntry {
   rank: number;
   user_name: string;
@@ -42,7 +44,7 @@ export default function RankingPage() {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/rankings');
+      const response = await fetch(`${API_BASE}/api/rankings`);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
