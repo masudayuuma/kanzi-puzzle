@@ -19,12 +19,18 @@ init_db()
 app = FastAPI()
 
 # CORS設定（Next.jsからのリクエストを許可）
+# 本番のフロントエンド origin は環境変数で指定（カンマ区切りで複数可）
+cors_origins_env = os.getenv("CORS_ALLOW_ORIGINS", "").strip()
+allow_origin_regex = os.getenv("CORS_ALLOW_ORIGIN_REGEX")  # 例: r"https://.*\\.onrender\\.com"
+allowed_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or ["http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # preflight含め全メソッド許可
+    allow_headers=["*"],  # JSON等のヘッダ許可
 )
 
 # Gemini APIクライアントの初期化
