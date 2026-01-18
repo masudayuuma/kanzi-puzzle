@@ -43,28 +43,30 @@ export default function HomePage() {
           href="/game"
           onClick={playStartSound}
           style={{
-            padding: '24px 80px',
-            fontSize: '36px',
+            padding: '16px 60px',
+            fontSize: '28px',
             fontWeight: 'bold',
             backgroundColor: 'rgba(255, 165, 0, 0.95)',
             color: 'white',
             textDecoration: 'none',
-            borderRadius: '12px',
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.3), inset 0 -4px 0 rgba(0, 0, 0, 0.2)',
+            borderRadius: '10px',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.2)',
             transition: 'all 0.2s ease',
-            border: '3px solid rgba(255, 200, 0, 0.8)',
+            border: '2px solid rgba(255, 200, 0, 0.8)',
             cursor: 'pointer',
             textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)',
             letterSpacing: '2px',
+            width: '180px',
+            textAlign: 'center' as const,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.2)';
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = '0 8px 16px rgba(0, 0, 0, 0.4), inset 0 -3px 0 rgba(0, 0, 0, 0.2)';
             e.currentTarget.style.backgroundColor = 'rgba(255, 180, 0, 0.98)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 6px 12px rgba(0, 0, 0, 0.3), inset 0 -4px 0 rgba(0, 0, 0, 0.2)';
+            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.2)';
             e.currentTarget.style.backgroundColor = 'rgba(255, 165, 0, 0.95)';
           }}
         >
@@ -88,6 +90,8 @@ export default function HomePage() {
             cursor: 'pointer',
             textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)',
             letterSpacing: '2px',
+            width: '180px',
+            textAlign: 'center' as const,
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-3px)';

@@ -17,10 +17,20 @@ export default function GameEndPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
+  // 画像とサウンドのプリロード
   useEffect(() => {
+    // 背景画像をプリロード
+    const img = new Image();
+    img.src = '/game-end-machine.png';
+    img.onload = () => {
+      setImageLoaded(true);
+    };
+
+    // サウンド再生
     const audio = new Audio('/sounds/finish.mp3');
-    audio.volume = 0.05; // 音量を5%に設定
+    audio.volume = 0.05;
     audio.play().catch(err => console.error('Audio play failed:', err));
   }, []);
 
@@ -69,8 +79,21 @@ export default function GameEndPage() {
 
   return (
     <div className="page">
+      {/* 画像読み込み中は暗い画面を表示 */}
+      {!imageLoaded && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#0b0f18',
+          zIndex: 9999,
+        }} />
+      )}
+
       {/* 1枚絵（背景） */}
-      <div className="scene" aria-label="factory-console-background">
+      <div className="scene" aria-label="factory-console-background" style={{
+        opacity: imageLoaded ? 1 : 0,
+        transition: 'opacity 0.3s ease-in-out',
+      }}>
         {/* モニタ黒画面の上にUIを重ねる */}
         <div className="screen">
           <div className="scanlines" />
@@ -152,6 +175,7 @@ export default function GameEndPage() {
           position: relative;
           width: 100vw;
           height: 100vh;
+          background-color: #0b0f18; /* 暗い背景色を先に表示 */
           background-image: url('/game-end-machine.png');
           background-repeat: no-repeat;
           background-size: 130%;

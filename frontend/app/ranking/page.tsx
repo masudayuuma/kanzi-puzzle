@@ -19,11 +19,21 @@ export default function RankingPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   useEffect(() => {
+    // 背景画像をプリロード
+    const img = new Image();
+    img.src = '/game-end-machine.png';
+    img.onload = () => {
+      setImageLoaded(true);
+    };
+
+    // サウンド再生
     const audio = new Audio('/sounds/finish.mp3');
-    audio.volume = 0.05; // 音量を5%に設定
+    audio.volume = 0.05;
     audio.play().catch(err => console.error('Audio play failed:', err));
+
     fetchRankings();
   }, []);
 
@@ -82,8 +92,21 @@ export default function RankingPage() {
 
   return (
     <div className="page">
+      {/* 画像読み込み中は暗い画面を表示 */}
+      {!imageLoaded && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#0b0f18',
+          zIndex: 9999,
+        }} />
+      )}
+
       {/* 背景画像 */}
-      <div className="scene" aria-label="factory-console-background">
+      <div className="scene" aria-label="factory-console-background" style={{
+        opacity: imageLoaded ? 1 : 0,
+        transition: 'opacity 0.3s ease-in-out',
+      }}>
         {/* モニタ画面 */}
         <div className="screen">
           <div className="scanlines" />
@@ -191,6 +214,7 @@ export default function RankingPage() {
           position: relative;
           width: 100vw;
           height: 100vh;
+          background-color: #0b0f18; /* 暗い背景色を先に表示 */
           background-image: url('/game-end-machine.png');
           background-repeat: no-repeat;
           background-size: 130%;

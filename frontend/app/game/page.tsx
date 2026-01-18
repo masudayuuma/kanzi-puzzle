@@ -33,8 +33,9 @@ export default function GamePage() {
   const [typingScore, setTypingScore] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // BGM再生
+  // BGM再生 & ゲーム終了画面の画像をプリロード
   useEffect(() => {
+    // BGM
     if (audioRef.current) {
       audioRef.current.volume = 0.1;
       audioRef.current.loop = true;
@@ -42,6 +43,10 @@ export default function GamePage() {
         console.log('BGM autoplay prevented:', err);
       });
     }
+
+    // ゲーム終了画面の背景画像をプリロード（白いフラッシュを防ぐ）
+    const img = new Image();
+    img.src = '/game-end-machine.png';
 
     return () => {
       if (audioRef.current) {
