@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 
@@ -11,7 +12,7 @@ interface ScoreSubmitResult {
   score_id: string;
 }
 
-export default function GameEndPage() {
+function Inner() {
   const searchParams = useSearchParams();
   const score = parseInt(searchParams.get('score') || '0', 10);
 
@@ -431,5 +432,13 @@ export default function GameEndPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Inner />
+    </Suspense>
   );
 }
