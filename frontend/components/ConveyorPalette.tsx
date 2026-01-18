@@ -129,6 +129,7 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
   const lastUpdateTimeRef = useRef<number>(0);
   const gameStartTimeRef = useRef<number>(0);
   const gameStateRef = useRef(gameState);
+  const nextIdRef = useRef<number>(1); // nextIdを直接管理
 
   // gameStateRefを常に最新に保つ
   useEffect(() => {
@@ -187,8 +188,12 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     const radical = radicals[Math.floor(Math.random() * radicals.length)];
     const pos = getSpawnPosition(lane);
 
+    // nextIdRefを使ってユニークなIDを生成
+    const currentId = nextIdRef.current;
+    nextIdRef.current += 1;
+
     const newItem: ActiveItem = {
-      id: `item-${gameStateRef.current.nextId}`,
+      id: `item-${currentId}`,
       radical,
       key,
       lane,
@@ -419,6 +424,7 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     });
     lastUpdateTimeRef.current = 0;
     gameStartTimeRef.current = 0;
+    nextIdRef.current = 1; // nextIdもリセット
     setTimeRemaining(GAME_CONFIG.GAME_DURATION);
     setIsPlaying(true);
   };
