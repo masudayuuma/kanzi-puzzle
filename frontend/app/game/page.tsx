@@ -6,6 +6,8 @@ import { PlacedPart } from '@/data/parts';
 import ConveyorPalette from '@/components/ConveyorPalette';
 import CanvasStage, { CanvasStageRef } from '@/components/CanvasStage';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
+
 interface JudgeResult {
   ok: boolean;
   recognized: string;
@@ -234,7 +236,7 @@ export default function GamePage() {
       const croppedDataUrl = tempCanvas.toDataURL();
 
       // FastAPI に送信
-      const response = await fetch('http://localhost:8000/api/judge', {
+      const response = await fetch(`${API_BASE}/api/judge`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
