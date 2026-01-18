@@ -175,6 +175,19 @@ export default function GamePage() {
     setError(null);
   };
 
+  // スペースキーで削除
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && selectedInstanceId) {
+        e.preventDefault();
+        handleDelete();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedInstanceId]);
+
   // 指定されたグリッドエリア内のパーツのみをAI判定
   const handleSubmitArea = async (area: GridArea) => {
     const areaRect = gridAreas[area];
@@ -518,7 +531,7 @@ export default function GamePage() {
               cursor: selectedInstanceId ? 'pointer' : 'not-allowed',
             }}
           >
-            削除
+            削除 (space)
           </button>
           <button
             onClick={handleReset}
