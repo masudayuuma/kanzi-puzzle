@@ -16,10 +16,15 @@ interface ConveyorPaletteProps {
 // 設定値
 // ========================================
 const GAME_CONFIG = {
-  SPAWN_INTERVAL: 1500,       // スポーン間隔（ミリ秒）
-  MOVE_SPEED: 150,            // 移動速度（ピクセル/秒）
-  LANE_THICKNESS: 80,         // レーン厚み
-  GAME_DURATION: 60,          // ゲーム時間（秒）
+  MOVE_SPEED: 70,               // 移動速度（ピクセル/秒）
+  LANE_THICKNESS: 80,            // レーン厚み
+  GAME_DURATION: 60,             // ゲーム時間（秒）
+  // 難易度段階（20秒ごとに変化）
+  DIFFICULTY_STAGES: [
+    { timeFrom: 0, timeTo: 20, spawnInterval: 3500 },   // 0-20秒: 2000ms間隔
+    { timeFrom: 20, timeTo: 40, spawnInterval: 2200 },  // 20-40秒: 1300ms間隔
+    { timeFrom: 40, timeTo: 60, spawnInterval: 1500 },   // 40-60秒: 800ms間隔
+  ],
 };
 
 // ========================================
@@ -115,7 +120,12 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
 
   const [isPlaying, setIsPlaying] = useState(true); // 初期状態で開始
   const [timeRemaining, setTimeRemaining] = useState(GAME_CONFIG.GAME_DURATION);
-  const lastSpawnTimeRef = useRef<number>(0);
+  const lastSpawnTimePerLaneRef = useRef<Record<LaneType, number>>({
+    TOP: 0,
+    RIGHT: 0,
+    BOTTOM: 0,
+    LEFT: 0,
+  });
   const lastUpdateTimeRef = useRef<number>(0);
   const gameStartTimeRef = useRef<number>(0);
   const gameStateRef = useRef(gameState);
@@ -138,41 +148,40 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
   const getSpawnPosition = useCallback((lane: LaneType): { x: number; y: number } => {
     const laneThickness = clamp(canvasRect.width * 0.15, 60, 100); // レーン描画と同じ厚さ
     const gap = 0; // レーン描画と同じギャップ
-    
+
     // レーンの中心座標を計算（各レーンの厚みの中央に配置）
     switch (lane) {
       case 'TOP':
-        // 左端からスタート、レーンの中心のy座標
-        return { 
-          x: 0, 
-          y: canvasRect.y - gap - laneThickness / 2 
+        // 左端（canvasRectの左端）からスタート、レーンの中心のy座標
+        return {
+          x: canvasRect.x,
+          y: canvasRect.y - gap - laneThickness / 2
         };
       case 'RIGHT':
-        // レーンの中心のx座標、上端からスタート
-        return { 
-          x: canvasRect.x + canvasRect.width + gap + laneThickness / 2, 
-          y: 0 
+        // レーンの中心のx座標、上端（canvasRectの上端）からスタート
+        return {
+          x: canvasRect.x + canvasRect.width + gap + laneThickness / 2,
+          y: canvasRect.y
         };
       case 'BOTTOM':
-        // 右端からスタート、レーンの中心のy座標
-        return { 
-          x: containerWidth, 
-          y: canvasRect.y + canvasRect.height + gap + laneThickness / 2 
+        // 右端（canvasRectの右端）からスタート、レーンの中心のy座標
+        return {
+          x: canvasRect.x + canvasRect.width,
+          y: canvasRect.y + canvasRect.height + gap + laneThickness / 2
         };
       case 'LEFT':
-        // レーンの中心のx座標、下端からスタート
-        return { 
-          x: canvasRect.x - gap - laneThickness / 2, 
-          y: containerHeight 
+        // レーンの中心のx座標、下端（canvasRectの下端）からスタート
+        return {
+          x: canvasRect.x - gap - laneThickness / 2,
+          y: canvasRect.y + canvasRect.height
         };
     }
   }, [canvasRect, containerWidth, containerHeight]);
 
   // ========================================
-  // スポーン処理
+  // スポーン処理（各レーン個別）
   // ========================================
-  const spawnItem = useCallback(() => {
-    const lane = ALL_LANES[Math.floor(Math.random() * ALL_LANES.length)];
+  const spawnItemInLane = useCallback((lane: LaneType) => {
     const key = LANE_CONFIG[lane].key;
     const radicals = radicalsByKey[key];
     const radical = radicals[Math.floor(Math.random() * radicals.length)];
@@ -202,7 +211,10 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     const gameLoop = (timestamp: number) => {
       if (lastUpdateTimeRef.current === 0) {
         lastUpdateTimeRef.current = timestamp;
-        lastSpawnTimeRef.current = timestamp;
+        // 各レーンのスポーンタイマーを初期化
+        ALL_LANES.forEach(lane => {
+          lastSpawnTimePerLaneRef.current[lane] = timestamp;
+        });
         gameStartTimeRef.current = timestamp;
       }
 
@@ -223,11 +235,19 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
         return;
       }
 
-      // スポーン処理
-      if (timestamp - lastSpawnTimeRef.current >= GAME_CONFIG.SPAWN_INTERVAL) {
-        spawnItem();
-        lastSpawnTimeRef.current = timestamp;
-      }
+      // 現在の難易度段階を取得
+      const currentStage = GAME_CONFIG.DIFFICULTY_STAGES.find(
+        stage => elapsedSeconds >= stage.timeFrom && elapsedSeconds < stage.timeTo
+      );
+      const currentSpawnInterval = currentStage?.spawnInterval || 2000;
+
+      // 各レーンごとにスポーン処理
+      ALL_LANES.forEach(lane => {
+        if (timestamp - lastSpawnTimePerLaneRef.current[lane] >= currentSpawnInterval) {
+          spawnItemInLane(lane);
+          lastSpawnTimePerLaneRef.current[lane] = timestamp;
+        }
+      });
 
       // 位置更新
       dispatch({
@@ -237,14 +257,22 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
         containerH: containerHeight,
       });
 
-      // ミス判定（画面外に出た）
+      // ミス判定（レーンの範囲外に出た）
       const missedIds = gameStateRef.current.activeItems
         .filter((item) => {
           switch (item.lane) {
-            case 'TOP': return item.x > containerWidth;
-            case 'RIGHT': return item.y > containerHeight;
-            case 'BOTTOM': return item.x < 0;
-            case 'LEFT': return item.y < 0;
+            case 'TOP':
+              // 左→右なので右端（canvasRect右端）で消える
+              return item.x > canvasRect.x + canvasRect.width;
+            case 'RIGHT':
+              // 上→下なので下端（canvasRect下端）で消える
+              return item.y > canvasRect.y + canvasRect.height;
+            case 'BOTTOM':
+              // 右→左なので左端（canvasRect左端）で消える
+              return item.x < canvasRect.x;
+            case 'LEFT':
+              // 下→上なので上端（canvasRect上端）で消える
+              return item.y < canvasRect.y;
           }
         })
         .map((item) => item.id);
@@ -261,7 +289,7 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [isPlaying, spawnItem, containerWidth, containerHeight, onGameEnd]);
+  }, [isPlaying, spawnItemInLane, containerWidth, containerHeight, onGameEnd]);
 
   // ========================================
   // タイミング判定：アイテムがキーラベルゾーン内にいるか
@@ -393,7 +421,10 @@ const ConveyorPalette = ({ onSelectPart, containerWidth, containerHeight, canvas
   // ========================================
   const handleStart = () => {
     dispatch({ type: 'RESET_GAME' });
-    lastSpawnTimeRef.current = 0;
+    // 各レーンのスポーンタイマーをリセット
+    ALL_LANES.forEach(lane => {
+      lastSpawnTimePerLaneRef.current[lane] = 0;
+    });
     lastUpdateTimeRef.current = 0;
     gameStartTimeRef.current = 0;
     setTimeRemaining(GAME_CONFIG.GAME_DURATION);
